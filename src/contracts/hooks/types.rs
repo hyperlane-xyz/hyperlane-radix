@@ -1,0 +1,20 @@
+use scrypto::prelude::*;
+
+#[derive(ScryptoSbor, ScryptoEvent)]
+pub enum Types {
+    UNUSED,
+    ROUTING,
+    AGGREGATION,
+    MERKLETREE,
+    INTERCHAINGASPAYMASTER,
+    FALLBACKROUTING,
+    IDAUTHISM,
+    PAUSABLE,
+    PROTOCOLFEE,
+    LAYERZEROV1,
+    RATELIMITED,
+    ARBL2TOL1,
+    OPL2TOL1,
+    MAILBOXDEFAULTHOOK,
+    AMOUNTROUTING,
+}

@@ -1,0 +1,212 @@
+use scrypto::crypto::{keccak256_hash, IsHash};
+use scrypto::prelude::*;
+
+use crate::types::eth::{domain_hash, eth_hash};
+
+pub const MESSAGE_VERSION: u8 = 3;
+
+/// A Stamped message that has been committed at some nonce
+pub type RawHyperlaneMessage = Vec<u8>;
+
+// TODO: open discussion whether or not we actually need Bytes32 - we can also just use Hash, but this might be confusing
+// we can also rename them, and i see there is an interal support for wrapping, might also be worth it
+
+#[derive(Clone, Eq, PartialEq, Hash, Sbor, ScryptoEvent, PartialOrd, Ord, Copy, Default, Debug)]
+#[sbor(transparent)]
+pub struct Bytes32([u8; 32]);
+
+impl Bytes32 {
+    /// Returns a zeroed out Bytes32
+    pub fn zero() -> Self {
+        Bytes32([0u8; 32])
+    }
+}
+
+impl From<ComponentAddress> for Bytes32 {
+    fn from(value: ComponentAddress) -> Self {
+        let mut bytes = [0u8; 32];
+        let src = value.as_bytes();
+        let len = src.len();
+        // Copy component address bytes starting from position 2 in the destination array
+        bytes[32 - len..].copy_from_slice(src);
+        Bytes32(bytes)
+    }
+}
+
+impl From<Hash> for Bytes32 {
+    fn from(value: Hash) -> Self {
+        Bytes32(value.0)
+    }
+}
+
+impl From<[u8; 32]> for Bytes32 {
+    fn from(bytes: [u8; 32]) -> Self {
+        Bytes32(bytes)
+    }
+}
+
+impl From<&[u8; 32]> for Bytes32 {
+    fn from(bytes: &[u8; 32]) -> Self {
+        Bytes32(bytes.clone())
+    }
+}
+
+impl From<&[u8]> for Bytes32 {
+    fn from(bytes: &[u8]) -> Self {
+        let bytes: [u8; 32] = bytes.try_into().expect("Unable to parse bytes to bytes32");
+
+        Bytes32(bytes.clone())
+    }
+}
+
+impl AsRef<[u8]> for Bytes32 {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
+    }
+}
+
+impl Into<Hash> for Bytes32 {
+    fn into(self) -> Hash {
+        Hash::from_bytes(self.0)
+    }
+}
+
+impl Into<ComponentAddress> for Bytes32 {
+    fn into(self) -> ComponentAddress {
+        // component addresses are 30 bytes long
+        // remove the first 2 bytes
+        let mut address_bytes = [0u8; 30];
+        address_bytes.copy_from_slice(&self.0[2..32]);
+        // TODO: double check whether or not we want to enable checking here
+        // this will panic if the given address is not a valid global compoentn / address
+        ComponentAddress::new_or_panic(address_bytes)
+    }
+}
+
+/// A full Hyperlane message between chains
+#[derive(Clone, Eq, PartialEq, Hash, ScryptoSbor, ScryptoEvent, Debug)]
+pub struct HyperlaneMessage {
+    /// 1   Hyperlane version number
+    pub version: u8,
+    /// 4   Message nonce
+    pub nonce: u32,
+    /// 4   Origin domain ID
+    pub origin: u32,
+    /// 32  Address in origin convention
+    pub sender: Bytes32,
+    /// 4   Destination domain ID
+    pub destination: u32,
+    /// 32  Address in destination convention
+    pub recipient: Bytes32,
+    /// 0+  Message contents
+    pub body: Vec<u8>,
+}
+
+impl HyperlaneMessage {
+    pub fn new(
+        nonce: u32,
+        origin: u32,
+        sender: Bytes32,
+        destination: u32,
+        recipient: Bytes32,
+        body: Vec<u8>,
+    ) -> Self {
+        Self {
+            version: MESSAGE_VERSION,
+            nonce,
+            origin,
+            sender,
+            destination,
+            recipient,
+            body,
+        }
+    }
+
+    pub fn digest(
+        &self,
+        merkle_tree_hook: Bytes32,
+        checkpoint_root: Bytes32,
+        checkpoint_index: u32,
+    ) -> Hash {
+        let message_id = self.id();
+        let mut digest = domain_hash(self.origin, merkle_tree_hook.as_ref()).to_vec();
+        digest.extend(checkpoint_root.as_ref());
+        digest.extend(checkpoint_index.to_be_bytes());
+        digest.extend(message_id.as_ref());
+
+        let digest = keccak256_hash(digest);
+        eth_hash(digest.as_ref())
+    }
+
+    pub fn message_digest(
+        origin: u32,
+        message_id: Bytes32,
+        merkle_tree_hook: Bytes32,
+        checkpoint_root: Bytes32,
+        checkpoint_index: u32,
+    ) -> Hash {
+        let mut digest = domain_hash(origin, &merkle_tree_hook.as_ref()).to_vec();
+        digest.extend(checkpoint_root.as_ref());
+        digest.extend(checkpoint_index.to_be_bytes());
+        digest.extend(message_id.as_ref());
+
+        let digest = keccak256_hash(digest);
+        eth_hash(digest.as_ref())
+    }
+}
+
+impl From<RawHyperlaneMessage> for HyperlaneMessage {
+    fn from(m: RawHyperlaneMessage) -> Self {
+        HyperlaneMessage::from(&m)
+    }
+}
+
+impl From<&RawHyperlaneMessage> for HyperlaneMessage {
+    fn from(m: &RawHyperlaneMessage) -> Self {
+        let version = m[0];
+        let nonce: [u8; 4] = m[1..5].try_into().unwrap();
+        let origin: [u8; 4] = m[5..9].try_into().unwrap();
+        let sender: [u8; 32] = m[9..41].try_into().unwrap();
+        let destination: [u8; 4] = m[41..45].try_into().unwrap();
+        let recipient: [u8; 32] = m[45..77].try_into().unwrap();
+        let body = m[77..].into();
+        Self {
+            version,
+            nonce: u32::from_be_bytes(nonce),
+            origin: u32::from_be_bytes(origin),
+            sender: sender.into(),
+            destination: u32::from_be_bytes(destination),
+            recipient: recipient.into(),
+            body,
+        }
+    }
+}
+
+impl From<&HyperlaneMessage> for RawHyperlaneMessage {
+    fn from(m: &HyperlaneMessage) -> Self {
+        let mut message_vec = vec![];
+        message_vec.push(m.version);
+        message_vec.extend_from_slice(&m.nonce.to_be_bytes());
+        message_vec.extend_from_slice(&m.origin.to_be_bytes());
+        message_vec.extend_from_slice(m.sender.0.as_ref());
+        message_vec.extend_from_slice(&m.destination.to_be_bytes());
+        message_vec.extend_from_slice(m.recipient.0.as_ref());
+        message_vec.extend_from_slice(&m.body);
+        message_vec
+    }
+}
+
+impl Into<Vec<u8>> for HyperlaneMessage {
+    fn into(self) -> Vec<u8> {
+        RawHyperlaneMessage::from(&self)
+    }
+}
+
+impl HyperlaneMessage {
+    /// Convert the message to a message id
+    pub fn id(&self) -> Bytes32 {
+        let message_bytes: RawHyperlaneMessage = self.into();
+        let result = keccak256_hash(message_bytes);
+        result.as_bytes().into()
+    }
+}
