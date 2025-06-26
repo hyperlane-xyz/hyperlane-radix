@@ -24,10 +24,10 @@ echo "xrd = $xrd"
 echo "package = $package"
 
 echo "\nConfiguring Mailbox"
-export mailbox=`resim run create_mailbox.rtm | grep -A 1 "New Entities:" | grep "Component:" | awk '{print $3}'`
-export merkle_tree_hook=`resim run create_merkle_tree_hook.rtm | grep -A 1 "New Entities:" | grep "Component:" | awk '{print $3}'`
-export ism=`resim run create_ism.rtm | grep -A 1 "New Entities:" | grep "Component:" | awk '{print $3}'`
-export igp=`resim run create_igp.rtm | grep -A 1 "New Entities:" | grep "Component:" | awk '{print $3}'`
+export mailbox=`resim run manifest/create_mailbox.rtm | grep -A 1 "New Entities:" | grep "Component:" | awk '{print $3}'`
+export merkle_tree_hook=`resim run manifest/create_merkle_tree_hook.rtm | grep -A 1 "New Entities:" | grep "Component:" | awk '{print $3}'`
+export ism=`resim run manifest/create_ism.rtm | grep -A 1 "New Entities:" | grep "Component:" | awk '{print $3}'`
+export igp=`resim run manifest/create_igp.rtm | grep -A 1 "New Entities:" | grep "Component:" | awk '{print $3}'`
 
 resim call-method $mailbox set_required_hook $merkle_tree_hook > /dev/null
 resim call-method $mailbox set_default_hook $igp > /dev/null
