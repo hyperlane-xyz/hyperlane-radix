@@ -1,0 +1,46 @@
+CALL_METHOD
+    Address("component_sim1cptxxxxxxxxxfaucetxxxxxxxxx000527798379xxxxxxxxxhkrefh")
+    "lock_fee"
+    Decimal("5000")
+;
+# first have to take some amount from the xrd
+CALL_METHOD
+    Address("${account}")
+    "withdraw"
+    Address("${xrd}")
+    Decimal("11")
+;
+CALL_METHOD
+    Address("${account}")
+    "withdraw"
+    Address("${hyp_synthetic_token}")
+    Decimal("1")
+;
+# put the taken amount into a bucket to that we can pass it into the function that we are calling
+TAKE_FROM_WORKTOP
+    Address("${hyp_synthetic_token}")
+    Decimal("1")
+    Bucket("bucket1") # the bucket name that we put the xrd into
+;
+# put the taken amount into a bucket to that we can pass it into the function that we are calling
+TAKE_FROM_WORKTOP
+    Address("${xrd}")
+    Decimal("11")
+    Bucket("bucket2") # the bucket name that we put the xrd into
+;
+CALL_METHOD
+    Address("${hyp_synthetic}")
+    "transfer_remote"
+    1337u32
+    Bytes("0000000000000000000000000000000000000000000000000000000000000001")
+    Bucket("bucket1")
+    Array<Bucket>(Bucket("bucket2")) # passing the bucket into the dispatch method as the payment
+    None
+    None
+;
+CALL_METHOD
+    Address("${account}")
+    "try_deposit_batch_or_refund"
+    Expression("ENTIRE_WORKTOP")
+    Enum<0u8>()
+;

@@ -1,0 +1,24 @@
+CALL_METHOD
+    Address("component_sim1cptxxxxxxxxxfaucetxxxxxxxxx000527798379xxxxxxxxxhkrefh")
+    "lock_fee"
+    Decimal("5000")
+;
+# Create a proof of a badge on your account. The "create_proof_of_amount" method returns a Proof to the authzone.
+CALL_METHOD
+  Address("${account}")
+  "create_proof_of_amount"
+  Address("${hyp_synthetic_owner_badge}")
+  Decimal("1");
+CALL_METHOD
+    Address("${hyp_synthetic}")
+    "enroll_remote_router"
+    1337u32
+    Bytes("0000000000000000000000000000000000000000000000000000000000000001")
+    Decimal("20")
+;
+CALL_METHOD
+    Address("${account}")
+    "try_deposit_batch_or_refund"
+    Expression("ENTIRE_WORKTOP")
+    Enum<0u8>()
+;

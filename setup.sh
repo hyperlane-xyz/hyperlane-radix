@@ -36,3 +36,23 @@ echo "mailbox = $mailbox"
 echo "merkle_tree_hook = $merkle_tree_hook"
 echo "igp = $igp"
 echo "ism = $ism"
+
+echo "\nSetup Warp Route"
+output_collateral=$(resim run manifest/warp/create_warp_collateral.rtm)
+export hyp_collateral=$(echo "$output_collateral" | grep -A 1 "New Entities:" | grep "Component:" | awk '{print $3}')
+export hyp_collateral_owner_badge=$(echo "$output_collateral" | grep -A 2 "New Entities:" | grep "Resource:" | awk '{print $3}')
+resim run manifest/warp/enroll_remote_router.rtm > /dev/null
+
+echo "hyp_collateral = $hyp_collateral"
+echo "hyp_collateral_owner = $hyp_collateral_owner"
+
+output_synthetic=$(resim run manifest/warp/create_warp_synthetic.rtm)
+export hyp_synthetic=$(echo "$output_synthetic" | grep -A 1 "New Entities:" | grep "Component:" | awk '{print $3}')
+export hyp_synthetic_owner_badge=$(echo "$output_synthetic" | grep -A 2 "New Entities:" | grep "Resource:" | awk '{print $3}')
+export hyp_synthetic_token=$(echo "$output_synthetic" | grep -A 3 "New Entities:" | grep "Resource:" | sed -n '2p' | awk '{print $3}')
+resim run manifest/warp/enroll_remote_router_synthetic.rtm > /dev/null
+
+echo ""
+echo "hyp_synthetic = $hyp_synthetic"
+echo "hyp_synthetic_owner_badge = $hyp_synthetic_owner_badge"
+echo "hyp_synthetic_token = $hyp_synthetic_token"

@@ -47,6 +47,9 @@ mod mailbox {
         default_hook: Option<ComponentAddress>,
         required_hook: Option<ComponentAddress>,
 
+        // TODO use Scrypto types
+        // type LazyMap<K, V> = KeyValueStore<K, V>;
+        // type LazySet<T> = KeyValueStore<T, ()>;
         processed_messages: HashMap<Bytes32, Delivery>,
 
         // latests dispatched message, used for auth in hooks
@@ -223,7 +226,13 @@ mod mailbox {
             quote
         }
 
-        pub fn process(&mut self, metadata: Vec<u8>, raw_message: Vec<u8>) -> () {
+        pub fn process(
+            &mut self, 
+            metadata: Vec<u8>, 
+            raw_message: Vec<u8>, 
+            recipient_component: ComponentAddress,
+            visible_components: Vec<ComponentAddress>
+        ) -> () {
             let message: HyperlaneMessage = raw_message.clone().into();
 
             if self.local_domain != message.destination {
@@ -266,12 +275,11 @@ mod mailbox {
             });
             Runtime::emit_event(ProcessIdEvent { message_id });
 
-            // TODO: call the handle of the application
-            // ScryptoVmV1Api::object_call(
-            //     recipient.as_node_id(),
-            //     "handle",
-            //     scrypto_args!(raw_message),
-            // );
+            ScryptoVmV1Api::object_call(
+                recipient_component.as_node_id(),
+                "handle",
+                scrypto_args!(raw_message, visible_components),
+            );
 
             ()
         }
