@@ -29,18 +29,28 @@ pub struct RemoteRouter {
 pub struct SendRemoteTransferEvent {
     pub sender: Bytes32,
     pub destination_domain: u32,
-    pub recipient: Bytes32,
+    pub recipient: String,
+    pub amount: Decimal,
+}
+
+#[derive(ScryptoSbor, ScryptoEvent)]
+pub struct ReceiveRemoteTransferEvent {
+    pub sender: Bytes32,
+    pub origin_domain: u32,
+    pub recipient: String,
     pub amount: Decimal,
 }
 
 #[blueprint]
-#[events(SendRemoteTransferEvent)]
+#[events(SendRemoteTransferEvent, ReceiveRemoteTransferEvent)]
 mod hyp_token {
 
     enable_method_auth! {
         methods {
             transfer_remote => PUBLIC;
             handle => PUBLIC;
+            ism => PUBLIC;
+            set_ism => restrict_to: [OWNER];
             enroll_remote_router => restrict_to: [OWNER];
             unroll_remote_router => restrict_to: [OWNER];
         }
@@ -154,6 +164,21 @@ mod hyp_token {
         }
 
         /*
+            Set a custom ISM which is used for verification instead of the default one
+            provided by the mailbox.
+        */
+        pub fn set_ism(&mut self, ism: Option<ComponentAddress>) {
+            self.ism = ism;
+        }
+
+        /*
+            The mailbox calls this function to receive the custom ism address.
+        */
+        pub fn ism(&mut self) -> Option<ComponentAddress> {
+            self.ism
+        }
+
+        /*
             Public function called by the end-user to initiate a Hyperlane token transfer
         */
         pub fn transfer_remote(
@@ -188,14 +213,15 @@ mod hyp_token {
 
             // Payload for the Hyperlane message
             let payload = WarpPayload::new(recipient, token_amount);
-            let payload: Vec<u8> = payload.into();
 
             Runtime::emit_event(SendRemoteTransferEvent {
                 sender: Bytes32::zero(),
                 destination_domain: destination,
-                recipient,
+                recipient: Runtime::bech32_encode_address(payload.component_address()),
                 amount: token_amount,
             });
+
+            let payload: Vec<u8> = payload.into();
 
             // Dispatch payload to mailbox
             let result = ScryptoVmV1Api::object_call(
@@ -257,7 +283,12 @@ mod hyp_token {
                 scrypto_args!(share, None::<ResourceOrNonFungible>),
             );
 
-            // TODO add receive event
+            Runtime::emit_event(ReceiveRemoteTransferEvent {
+                sender: Bytes32::zero(),
+                origin_domain: hyperlane_message.origin,
+                recipient: Runtime::bech32_encode_address(warp_payload.component_address()),
+                amount: warp_payload.amount,
+            });
         }
     }
 }

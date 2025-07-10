@@ -47,10 +47,7 @@ mod mailbox {
         default_hook: Option<ComponentAddress>,
         required_hook: Option<ComponentAddress>,
 
-        // TODO use Scrypto types
-        // type LazyMap<K, V> = KeyValueStore<K, V>;
-        // type LazySet<T> = KeyValueStore<T, ()>;
-        processed_messages: HashMap<Bytes32, Delivery>,
+        processed_messages: KeyValueStore<Bytes32, ()>,
 
         // latests dispatched message, used for auth in hooks
         latest_dispatched_message: Bytes32,
@@ -69,7 +66,7 @@ mod mailbox {
                 default_ism: None,
                 default_hook: None,
                 required_hook: None,
-                processed_messages: HashMap::new(),
+                processed_messages: KeyValueStore::new(),
                 latest_dispatched_message: Bytes32::zero(),
             }
             .instantiate()
@@ -87,7 +84,7 @@ mod mailbox {
         }
 
         pub fn delivered(&self, message_id: Bytes32) -> bool {
-            self.processed_messages.contains_key(&message_id)
+            self.processed_messages.get(&message_id).is_some()
         }
 
         pub fn default_ism(&self) -> Option<ComponentAddress> {
@@ -247,25 +244,22 @@ mod mailbox {
             if self.delivered(message_id) {
                 panic!("Message already processed");
             }
+            self.processed_messages.insert(message_id, ());
 
-            // TODO: uncomment once we are in production, just testing right now and don't want to sign/prepare metadata manaully. I just grabbed some from the real world
-            // the .into() method checks for a valid component address, meaning if its existing and global
-            // let recipient: ComponentAddress = message.recipient.into();
-            // let recipient_ism = self.recipient_ism(recipient);
-            let recipient_ism = self.default_ism;
-            if let Some(ism) = recipient_ism {
-                // Call the ISM to verify the message
-                let result = ScryptoVmV1Api::object_call(
-                    ism.as_node_id(),
-                    "verify",
-                    scrypto_args!(metadata, raw_message.clone()),
-                );
+            // TODO check if recipient_component matches message recipient
 
-                let result: bool =
-                    scrypto_decode(&result).expect("Failed to decode ISM verification result");
-                if !result {
-                    panic!("Mailbox: ISM verification failed");
-                }
+            // Call the ISM to verify the message
+            let recipient_ism = self.recipient_ism(recipient_component).expect("Neither mailbox nor receiver have specified an ISM");
+            let result = ScryptoVmV1Api::object_call(
+                recipient_ism.as_node_id(),
+                "verify",
+                scrypto_args!(metadata, raw_message.clone()),
+            );
+
+            let result: bool =
+                scrypto_decode(&result).expect("Failed to decode ISM verification result");
+            if !result {
+                panic!("Mailbox: ISM verification failed");
             }
 
             Runtime::emit_event(ProcessEvent {
