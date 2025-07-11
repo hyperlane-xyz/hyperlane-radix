@@ -124,6 +124,7 @@ mod mailbox {
             hook_metadata: Option<StandardHookMetadata>,
             payment: Vec<FungibleBucket>,
         ) -> (Bytes32, Vec<FungibleBucket>) {
+
             let hyperlane_message = HyperlaneMessage::new(
                 self.nonce,
                 self.local_domain,

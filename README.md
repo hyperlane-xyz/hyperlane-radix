@@ -63,3 +63,7 @@ scrypto test -- --nocapture
 - Mailbox:
   - similar issue to the MerkleTreeHook have to figure out caller
     - proposed solution: Mailbox issues badges to apps and checks validity
+
+- Check on Finality (How do the Shards work) -> Consensus engine
+- have a dedicated metadata function for involved addresses which the relayer calls first
+- WARNING: Double check that proofs can not be forwarded; Proofs should be specific to that recipient, should not work for other recipients.

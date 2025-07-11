@@ -29,7 +29,7 @@ pub struct RemoteRouter {
 pub struct SendRemoteTransferEvent {
     pub sender: Bytes32,
     pub destination_domain: u32,
-    pub recipient: String,
+    pub recipient: Bytes32,
     pub amount: Decimal,
 }
 
@@ -75,17 +75,17 @@ mod hyp_token {
         */
         pub fn instantiate(token_type: HypTokenType, mailbox: ComponentAddress) -> (Global<HypToken>, FungibleBucket) {
 
-            // create new owner badge
-            let owner_badge = ResourceBuilder::new_fungible(OwnerRole::None)
-                .metadata(metadata!(init {
-                    "name" => "Hyperlane Collateral Token - Owner Badge", locked;
-                }))
-                .divisibility(DIVISIBILITY_NONE)
-                .mint_initial_supply(1);
-
             // reserve an address for the component
             let (address_reservation, component_address) =
                 Runtime::allocate_component_address(HypToken::blueprint_id());
+
+            // create new owner badge
+            let owner_badge = ResourceBuilder::new_fungible(OwnerRole::None)
+                .metadata(metadata!(init {
+                    "name" => format!("Hyperlane Token Owner Badge {}", address_reservation.0.as_node_id().to_hex()), locked;
+                }))
+                .divisibility(DIVISIBILITY_NONE)
+                .mint_initial_supply(1);
 
             let mut resource_manager: Option<FungibleResourceManager> = None;
             let vault: FungibleVault = match &token_type {
@@ -217,7 +217,7 @@ mod hyp_token {
             Runtime::emit_event(SendRemoteTransferEvent {
                 sender: Bytes32::zero(),
                 destination_domain: destination,
-                recipient: Runtime::bech32_encode_address(payload.component_address()),
+                recipient,
                 amount: token_amount,
             });
 
