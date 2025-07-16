@@ -64,6 +64,7 @@ mod hyp_token {
 
     struct HypToken {
         token_type: HypTokenType,
+        // TODO consider making mailbox update-able
         mailbox: ComponentAddress,
         ism: Option<ComponentAddress>,
         enrolled_routers: KeyValueStore<u32, RemoteRouter>,

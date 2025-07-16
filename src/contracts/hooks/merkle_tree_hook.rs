@@ -35,6 +35,7 @@ mod merkle_tree_hook {
 
     struct MerkleTreeHook {
         merkle_tree: MerkleTree,
+        // TODO consider renaming to a more generic name, as there might be other callers
         mailbox: ComponentAddress,
     }
 
