@@ -10,18 +10,12 @@ pub struct WarpPayload {
     /// 32-byte Address in destination convention
     pub recipient: Bytes32,
     /// 32-byte Amount
-    pub amount: Decimal
+    pub amount: Decimal,
 }
 
 impl WarpPayload {
-    pub fn new(
-        recipient: Bytes32,
-        amount: Decimal,
-    ) -> Self {
-        Self {
-            recipient,
-            amount
-        }
+    pub fn new(recipient: Bytes32, amount: Decimal) -> Self {
+        Self { recipient, amount }
     }
 
     pub fn component_address(&self) -> ComponentAddress {
@@ -46,23 +40,19 @@ impl From<&RawWarpPayload> for WarpPayload {
 
         // Next 32 bytes encode the amount
         // In the future it might be possible that the warp payload carries additional metadata
-        let mut b =  m[32..64].to_vec();
+        let mut b = m[32..64].to_vec();
         b.reverse();
         let amount = U256::from_le_bytes(b.as_ref());
 
         let amount = I192::try_from(amount).expect("Invalid payload");
         let amount = Decimal::from_attos(amount);
 
-        Self {
-            recipient,
-            amount,
-        }
+        Self { recipient, amount }
     }
 }
 
 impl From<&WarpPayload> for RawWarpPayload {
     fn from(w: &WarpPayload) -> Self {
-
         let mut amount = U256::try_from(w.amount.attos())
             .unwrap()
             .to_le_bytes()
