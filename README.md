@@ -52,13 +52,7 @@ scrypto test -- --nocapture
   - IGP set destination gas config methods
   - Public / Protected Methods enforcen
   - move from Decimals to I192
-- Mailbox:
-  - Public / Protected Methods enforcen
 - MerkleTreeHook:
-  - check if the caller is the configured Mailbox
-    - https://docs.radixdlt.com/docs/auth
-    - https://docs.radixdlt.com/docs/using-proofs
-    - proposed solution: Mailbox issues badges to merkle tree hook and passes proof of it in post_dispatch
   - Double check the merkle tree implementation
 - Mailbox:
   - similar issue to the MerkleTreeHook have to figure out caller
@@ -67,3 +61,4 @@ scrypto test -- --nocapture
 - Check on Finality (How do the Shards work) -> Consensus engine
 - have a dedicated metadata function for involved addresses which the relayer calls first
 - WARNING: Double check that proofs can not be forwarded; Proofs should be specific to that recipient, should not work for other recipients.
+- Proxy Contract upgradability

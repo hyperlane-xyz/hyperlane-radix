@@ -1,0 +1,17 @@
+CALL_METHOD
+    Address("component_sim1cptxxxxxxxxxfaucetxxxxxxxxx000527798379xxxxxxxxxhkrefh")
+    "lock_fee"
+    Decimal("5000")
+;
+CALL_METHOD
+    Address("${hyp_synthetic}")
+    "handle"
+    Bytes("030000000300000539000000000000000000000000000000000000000000000000000000000000000104861f2e0000c06ce9b4a29060a1ed5d19e5eac5b6778af439b2db757cd90d8bbb7dd06a0000c169a00e3637d04099d059cb22912aaae58f08cdaf03139a3e10f40ac8cd0000000000000000000000000000000000000000000000000de0b6b3a7640000")
+    Array<Address>(Address("account_sim1c956qr3kxlgypxwst89j9yf24tjc7zxd4up38x37zr6q4jxdx9rhma"))
+;
+CALL_METHOD
+    Address("${account}")
+    "try_deposit_batch_or_refund"
+    Expression("ENTIRE_WORKTOP")
+    Enum<0u8>()
+;

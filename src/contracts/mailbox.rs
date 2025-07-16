@@ -22,14 +22,22 @@ mod mailbox {
     enable_method_auth! {
         // decide which methods are public and which are restricted to the component's owner
         methods {
+            // Public Lookup
             local_domain => PUBLIC;
             delivered => PUBLIC;
+
+            // ISM
             default_ism => PUBLIC;
-            set_default_ism => PUBLIC; // TODO: make this protected
+            set_default_ism => restrict_to: [OWNER];
+
+            // Default Hook
             default_hook => PUBLIC;
-            set_default_hook => PUBLIC; // TODO: make this protected
+            set_default_hook => restrict_to: [OWNER];
+
+            // Required Hook
             required_hook => PUBLIC;
-            set_required_hook => PUBLIC; // TODO: make this protected
+            set_required_hook => restrict_to: [OWNER];
+
             is_latest_dispatched => PUBLIC;
             dispatch => PUBLIC;
             quote_dispatch => PUBLIC;
@@ -41,8 +49,7 @@ mod mailbox {
     struct Mailbox {
         local_domain: u32,
         nonce: u32,
-        // TODO: maybe we can get type safety here
-        // But I don't think the Mailbox should own the ISM / Hook
+
         default_ism: Option<ComponentAddress>,
         default_hook: Option<ComponentAddress>,
         required_hook: Option<ComponentAddress>,
@@ -56,7 +63,15 @@ mod mailbox {
     impl Mailbox {
         /// Instantiates a new Mailbox component with the given local domain.
         pub fn mailbox_instantiate(local_domain: u32) -> (Global<Mailbox>, FungibleBucket) {
+
+            // reserve an address for the component
+            let (address_reservation, component_address) =
+                Runtime::allocate_component_address(Mailbox::blueprint_id());
+
             let owner_badge = ResourceBuilder::new_fungible(OwnerRole::None)
+                .metadata(metadata!(init {
+                    "name" => format!("Hyperlane Mailbox Owner Badge {}", Runtime::bech32_encode_address(component_address)), locked;
+                }))
                 .divisibility(DIVISIBILITY_NONE)
                 .mint_initial_supply(1);
 
@@ -73,7 +88,9 @@ mod mailbox {
             .prepare_to_globalize(OwnerRole::Fixed(rule!(require(
                 owner_badge.resource_address()
             ))))
+            .with_address(address_reservation)
             .globalize();
+
             // Return the global component and the owner badge
             (component, owner_badge)
         }
@@ -228,7 +245,6 @@ mod mailbox {
             &mut self, 
             metadata: Vec<u8>, 
             raw_message: Vec<u8>, 
-            recipient_component: ComponentAddress,
             visible_components: Vec<ComponentAddress>
         ) -> () {
             let message: HyperlaneMessage = raw_message.clone().into();
@@ -247,7 +263,7 @@ mod mailbox {
             }
             self.processed_messages.insert(message_id, ());
 
-            // TODO check if recipient_component matches message recipient
+            let recipient_component: ComponentAddress = message.recipient.into();
 
             // Call the ISM to verify the message
             let recipient_ism = self.recipient_ism(recipient_component).expect("Neither mailbox nor receiver have specified an ISM");

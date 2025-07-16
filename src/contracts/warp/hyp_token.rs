@@ -46,10 +46,16 @@ pub struct ReceiveRemoteTransferEvent {
 mod hyp_token {
 
     enable_method_auth! {
+        roles {
+            mailbox_component => updatable_by: [];
+        },
         methods {
+            // Public
             transfer_remote => PUBLIC;
-            handle => PUBLIC;
             ism => PUBLIC;
+            // Mailbox Only
+            handle => restrict_to: [mailbox_component];
+            // Owner Only
             set_ism => restrict_to: [OWNER];
             enroll_remote_router => restrict_to: [OWNER];
             unroll_remote_router => restrict_to: [OWNER];
@@ -75,6 +81,12 @@ mod hyp_token {
         */
         pub fn instantiate(token_type: HypTokenType, mailbox: ComponentAddress) -> (Global<HypToken>, FungibleBucket) {
 
+            // Create mailbox component rule to ensure that the "handle()" function can only
+            // be called by the mailbox itself.
+            let mailbox_component_rule = rule!(require(
+                NonFungibleGlobalId::global_caller_badge(mailbox)
+            ));
+
             // reserve an address for the component
             let (address_reservation, component_address) =
                 Runtime::allocate_component_address(HypToken::blueprint_id());
@@ -82,7 +94,14 @@ mod hyp_token {
             // create new owner badge
             let owner_badge = ResourceBuilder::new_fungible(OwnerRole::None)
                 .metadata(metadata!(init {
-                    "name" => format!("Hyperlane Token Owner Badge {}", address_reservation.0.as_node_id().to_hex()), locked;
+                    "name" => format!(
+                        "Hyperlane {} Token Owner Badge {}",
+                        (match token_type {
+                            HypTokenType::SYNTHETIC(_) => "Synthetic",
+                            HypTokenType::COLLATERAL(_) => "Collateral"
+                        }),
+                        Runtime::bech32_encode_address(component_address)
+                    ), locked;
                 }))
                 .divisibility(DIVISIBILITY_NONE)
                 .mint_initial_supply(1);
@@ -130,6 +149,9 @@ mod hyp_token {
                 .prepare_to_globalize(OwnerRole::Updatable(rule!(require(
                     owner_badge.resource_address()
                 ))))
+                .roles(roles! {
+                    mailbox_component => mailbox_component_rule;
+                })
                 .with_address(address_reservation)
                 .globalize();
 
@@ -255,10 +277,8 @@ mod hyp_token {
         pub fn handle(
             &mut self,
             raw_message: Vec<u8>,
-            visible_components: Vec<ComponentAddress>
+            visible_components: Vec<ComponentAddress>,
         ) {
-            // TODO verify mailbox caller ownership
-
             let hyperlane_message: HyperlaneMessage = raw_message.into();
 
             let router = self.enrolled_routers.get(&hyperlane_message.origin)
