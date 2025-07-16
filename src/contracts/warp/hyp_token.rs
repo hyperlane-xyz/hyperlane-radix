@@ -1,6 +1,6 @@
 use crate::{
-    types::{Bytes32},
-    types::{metadata::StandardHookMetadata, HyperlaneMessage, warp_payload::WarpPayload},
+    types::Bytes32,
+    types::{metadata::StandardHookMetadata, warp_payload::WarpPayload, HyperlaneMessage},
 };
 use scrypto::prelude::*;
 
@@ -46,10 +46,16 @@ pub struct ReceiveRemoteTransferEvent {
 mod hyp_token {
 
     enable_method_auth! {
+        roles {
+            mailbox_component => updatable_by: [];
+        },
         methods {
+            // Public
             transfer_remote => PUBLIC;
-            handle => PUBLIC;
             ism => PUBLIC;
+            // Mailbox Only
+            handle => restrict_to: [mailbox_component];
+            // Owner Only
             set_ism => restrict_to: [OWNER];
             enroll_remote_router => restrict_to: [OWNER];
             unroll_remote_router => restrict_to: [OWNER];
@@ -58,6 +64,7 @@ mod hyp_token {
 
     struct HypToken {
         token_type: HypTokenType,
+        // TODO consider making mailbox update-able
         mailbox: ComponentAddress,
         ism: Option<ComponentAddress>,
         enrolled_routers: KeyValueStore<u32, RemoteRouter>,
@@ -67,13 +74,19 @@ mod hyp_token {
     }
 
     impl HypToken {
-
         /*
             Instantiate Hyperlane Token Component with one fungible owner badge.
             The owner can enroll, unenroll and update remote routers.
             The owner can set a custom ISM.
         */
-        pub fn instantiate(token_type: HypTokenType, mailbox: ComponentAddress) -> (Global<HypToken>, FungibleBucket) {
+        pub fn instantiate(
+            token_type: HypTokenType,
+            mailbox: ComponentAddress,
+        ) -> (Global<HypToken>, FungibleBucket) {
+            // Create mailbox component rule to ensure that the "handle()" function can only
+            // be called by the mailbox itself.
+            let mailbox_component_rule =
+                rule!(require(NonFungibleGlobalId::global_caller_badge(mailbox)));
 
             // reserve an address for the component
             let (address_reservation, component_address) =
@@ -82,7 +95,14 @@ mod hyp_token {
             // create new owner badge
             let owner_badge = ResourceBuilder::new_fungible(OwnerRole::None)
                 .metadata(metadata!(init {
-                    "name" => format!("Hyperlane Token Owner Badge {}", address_reservation.0.as_node_id().to_hex()), locked;
+                    "name" => format!(
+                        "Hyperlane {} Token Owner Badge {}",
+                        (match token_type {
+                            HypTokenType::SYNTHETIC(_) => "Synthetic",
+                            HypTokenType::COLLATERAL(_) => "Collateral"
+                        }),
+                        Runtime::bech32_encode_address(component_address)
+                    ), locked;
                 }))
                 .divisibility(DIVISIBILITY_NONE)
                 .mint_initial_supply(1);
@@ -99,22 +119,21 @@ mod hyp_token {
                             }
                         ))
                         .mint_roles(mint_roles! {
-                        minter => rule!(require(global_caller(component_address)));
-                        minter_updater => rule!(deny_all);
-                    }).burn_roles(burn_roles! {
-                        burner => rule!(require(global_caller(component_address)));
-                        burner_updater => rule!(deny_all);
-                    })
+                            minter => rule!(require(global_caller(component_address)));
+                            minter_updater => rule!(deny_all);
+                        })
+                        .burn_roles(burn_roles! {
+                            burner => rule!(require(global_caller(component_address)));
+                            burner_updater => rule!(deny_all);
+                        })
                         .divisibility(metadata.divisibility)
                         .mint_initial_supply(0);
 
                     resource_manager = Some(bucket.resource_manager());
 
                     FungibleVault::with_bucket(bucket)
-                },
-                HypTokenType::COLLATERAL(resource_address) => {
-                    FungibleVault::new(*resource_address)
                 }
+                HypTokenType::COLLATERAL(resource_address) => FungibleVault::new(*resource_address),
             };
 
             // populate a GumballMachine struct and instantiate a new component
@@ -126,12 +145,15 @@ mod hyp_token {
                 enrolled_routers: KeyValueStore::new(),
                 resource_manager,
             }
-                .instantiate()
-                .prepare_to_globalize(OwnerRole::Updatable(rule!(require(
-                    owner_badge.resource_address()
-                ))))
-                .with_address(address_reservation)
-                .globalize();
+            .instantiate()
+            .prepare_to_globalize(OwnerRole::Updatable(rule!(require(
+                owner_badge.resource_address()
+            ))))
+            .roles(roles! {
+                mailbox_component => mailbox_component_rule;
+            })
+            .with_address(address_reservation)
+            .globalize();
 
             (component, owner_badge)
         }
@@ -145,21 +167,21 @@ mod hyp_token {
             receiver_address: Bytes32,
             gas: Decimal,
         ) {
-            self.enrolled_routers.insert(receiver_domain, RemoteRouter {
-                domain: receiver_domain,
-                recipient: receiver_address,
-                gas
-            })
+            self.enrolled_routers.insert(
+                receiver_domain,
+                RemoteRouter {
+                    domain: receiver_domain,
+                    recipient: receiver_address,
+                    gas,
+                },
+            )
         }
 
         /*
             Remove remote router for a given domain. The component can no longer send or receive
             tokens to the unenrolled destination.
         */
-        pub fn unroll_remote_router(
-            &mut self,
-            receiver_domain: u32,
-        ) {
+        pub fn unroll_remote_router(&mut self, receiver_domain: u32) {
             self.enrolled_routers.remove(&receiver_domain);
         }
 
@@ -190,7 +212,6 @@ mod hyp_token {
             custom_hook: Option<ComponentAddress>,
             standard_hook_metadata: Option<StandardHookMetadata>,
         ) -> Vec<FungibleBucket> {
-
             // value stored for later event and payload
             let token_amount = amount.amount();
 
@@ -198,7 +219,7 @@ mod hyp_token {
                 HypTokenType::SYNTHETIC(_) => {
                     // Burn Synthetic token
                     self.resource_manager.unwrap().burn(amount);
-                },
+                }
                 HypTokenType::COLLATERAL(_) => {
                     // Transfer collateral from user into the vault
                     self.vault.put(amount);
@@ -206,10 +227,10 @@ mod hyp_token {
             };
 
             // Get remote-router to know destination address and expected gas
-            let router = self.
-                enrolled_routers.
-                get(&mut destination.clone()).
-                expect("No route enrolled for destination");
+            let router = self
+                .enrolled_routers
+                .get(&mut destination.clone())
+                .expect("No route enrolled for destination");
 
             // Payload for the Hyperlane message
             let payload = WarpPayload::new(recipient, token_amount);
@@ -239,8 +260,8 @@ mod hyp_token {
             );
 
             // Return change-money of the interchain fee, if the user provided too much.
-            let (_, bucket): (Bytes32, Vec<FungibleBucket>) = scrypto_decode(&result)
-                .expect("Failed to decode dispatch result");
+            let (_, bucket): (Bytes32, Vec<FungibleBucket>) =
+                scrypto_decode(&result).expect("Failed to decode dispatch result");
 
             bucket
         }
@@ -252,28 +273,32 @@ mod hyp_token {
             Contract: If visible_components is empty, the method panics and returns a list
             of required component addresses.
         */
-        pub fn handle(
-            &mut self,
-            raw_message: Vec<u8>,
-            visible_components: Vec<ComponentAddress>
-        ) {
-            // TODO verify mailbox caller ownership
-
+        pub fn handle(&mut self, raw_message: Vec<u8>, visible_components: Vec<ComponentAddress>) {
             let hyperlane_message: HyperlaneMessage = raw_message.into();
 
-            let router = self.enrolled_routers.get(&hyperlane_message.origin)
-                .expect(&format!("No enrolled router for domain {:?}", hyperlane_message.origin));
+            let router = self
+                .enrolled_routers
+                .get(&hyperlane_message.origin)
+                .expect(&format!(
+                    "No enrolled router for domain {:?}",
+                    hyperlane_message.origin
+                ));
 
             assert_eq!(router.recipient, hyperlane_message.sender);
 
             let warp_payload: WarpPayload = hyperlane_message.body.clone().into();
 
             if visible_components.len() == 0 {
-                panic!("RequiredAddresses: {}", Runtime::bech32_encode_address(warp_payload.component_address()))
+                panic!(
+                    "RequiredAddresses: {}",
+                    Runtime::bech32_encode_address(warp_payload.component_address())
+                )
             }
 
             let share: FungibleBucket = match self.token_type {
-                HypTokenType::SYNTHETIC(_) => self.resource_manager.unwrap().mint(warp_payload.amount),
+                HypTokenType::SYNTHETIC(_) => {
+                    self.resource_manager.unwrap().mint(warp_payload.amount)
+                }
                 HypTokenType::COLLATERAL(_) => self.vault.take(warp_payload.amount),
             };
 

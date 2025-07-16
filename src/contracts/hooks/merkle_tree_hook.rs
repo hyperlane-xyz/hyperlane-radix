@@ -17,22 +17,44 @@ pub struct InsertedIntoTreeEvent {
 #[events(InsertedIntoTreeEvent)]
 mod merkle_tree_hook {
 
+    enable_method_auth! {
+        roles {
+            mailbox_component => updatable_by: [];
+        },
+        methods {
+            // Public
+            count => PUBLIC;
+            root => PUBLIC;
+            latest_checkpoint => PUBLIC;
+            is_latest_dispatched => PUBLIC;
+            quote_dispatch => PUBLIC;
+            // Mailbox Only
+            post_dispatch => restrict_to: [mailbox_component];
+        }
+    }
+
     struct MerkleTreeHook {
         merkle_tree: MerkleTree,
+        // TODO consider renaming to a more generic name, as there might be other callers
         mailbox: ComponentAddress,
     }
 
     impl MerkleTreeHook {
-        // TODO: discuss whether or not this component has to be global
-        // it instead could just be owned by the mailbox/aggregation hook directly
-        // this would also ensure, that the post_dispatch invokation is always correct
         pub fn instantiate(mailbox: ComponentAddress) -> Global<MerkleTreeHook> {
+            // Create mailbox component rule to ensure that the "post_dispatch()" function can only
+            // be called by the mailbox itself.
+            let mailbox_component_rule =
+                rule!(require(NonFungibleGlobalId::global_caller_badge(mailbox)));
+
             Self {
                 mailbox,
                 merkle_tree: MerkleTree::new(),
             }
             .instantiate()
             .prepare_to_globalize(OwnerRole::None)
+            .roles(roles! {
+                mailbox_component => mailbox_component_rule;
+            })
             .globalize()
         }
 
@@ -62,9 +84,10 @@ mod merkle_tree_hook {
                 .expect("MerkleTreeHook: failed to decode is_latest_dispatch from mailbox")
         }
 
-        /// Post dispatch accepts a vec of buckets, that is the payment that the user is willing to pass
-        /// We can't assume that payments will happen onyl in one resource type (one bucket is always only assisated with one resource)
-        /// We return the left over Buckets that have not been consumed
+        /// Post-dispatch accepts a vec of buckets; that is the payment that the user is willing to
+        /// pass. We can't assume that payments will happen only in one resource type
+        /// (one bucket is always only associated with one resource).
+        /// We return the leftover buckets that have not been consumed.
         pub fn post_dispatch(
             &mut self,
             _metadata: Option<StandardHookMetadata>,
@@ -72,25 +95,19 @@ mod merkle_tree_hook {
             payment: Vec<FungibleBucket>,
         ) -> Vec<FungibleBucket> {
             let id = message.id();
-            // TODO: we can't perfrom any state queries on the mailbox because it has already been locked when the merkle tree hook is called from the mailbox
-            // TODO: we have to pass a proof that only the mailbox can create in order to verify that this has been called from the mailbox
-            // TODO: we can do this by verifiying a proof to a resource that only the mailbox holds
-            // if !self.is_latest_dispatched(id) {
-            //     panic!("MerkleTreeHooK: message not dispatching on mailbox")
-            // }
 
             let index = self.count();
             self.merkle_tree.insert(id.into());
 
             Runtime::emit_event(InsertedIntoTreeEvent { id, index });
 
-            // Merkle tree hook does not consume any resources, return the entire payment unchangec
+            // Merkle tree hook does not consume any resources, return the entire payment unchanged.
             payment
         }
 
-        /// Quote dispatch returns a map from resources and their amount that is required in decimals
-        /// this ensure that we are not limited to a single payment resource and instead can model multiple resources
-        /// that might be needed in order to perfrom a remote transfer
+        /// Quote dispatch returns a map from resources and their amount that is required in
+        /// decimals. This ensures that we are not limited to a single payment resource and instead
+        /// can model multiple resources that might be needed to perform a remote transfer
         pub fn quote_dispatch(
             &self,
             _metadata: Option<StandardHookMetadata>,

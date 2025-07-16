@@ -24,14 +24,16 @@ echo "xrd = $xrd"
 echo "package = $package"
 
 echo "\nConfiguring Mailbox"
-export mailbox=`resim run manifest/create_mailbox.rtm | grep -A 1 "New Entities:" | grep "Component:" | awk '{print $3}'`
+output_mailbox=$(resim run manifest/create_mailbox.rtm)
+export mailbox=$(echo "$output_mailbox" | grep -A 1 "New Entities:" | grep "Component:" | awk '{print $3}')
+export mailbox_owner_badge=$(echo "$output_mailbox" | grep -A 2 "New Entities:" | grep "Resource:" | awk '{print $3}')
 export merkle_tree_hook=`resim run manifest/create_merkle_tree_hook.rtm | grep -A 1 "New Entities:" | grep "Component:" | awk '{print $3}'`
 export ism=`resim run manifest/create_ism.rtm | grep -A 1 "New Entities:" | grep "Component:" | awk '{print $3}'`
 export igp=`resim run manifest/create_igp.rtm | grep -A 1 "New Entities:" | grep "Component:" | awk '{print $3}'`
 
-resim call-method $mailbox set_required_hook $merkle_tree_hook > /dev/null
-resim call-method $mailbox set_default_hook $igp > /dev/null
-resim call-method $mailbox set_default_ism $ism > /dev/null
+resim call-method $mailbox set_required_hook $merkle_tree_hook --proofs $mailbox_owner_badge:1
+resim call-method $mailbox set_default_hook $igp --proofs $mailbox_owner_badge:1
+resim call-method $mailbox set_default_ism $ism --proofs $mailbox_owner_badge:1
 echo "mailbox = $mailbox"
 echo "merkle_tree_hook = $merkle_tree_hook"
 echo "igp = $igp"
