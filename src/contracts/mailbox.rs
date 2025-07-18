@@ -63,7 +63,6 @@ mod mailbox {
     impl Mailbox {
         /// Instantiates a new Mailbox component with the given local domain.
         pub fn mailbox_instantiate(local_domain: u32) -> (Global<Mailbox>, FungibleBucket) {
-
             // reserve an address for the component
             let (address_reservation, component_address) =
                 Runtime::allocate_component_address(Mailbox::blueprint_id());
@@ -141,7 +140,6 @@ mod mailbox {
             hook_metadata: Option<StandardHookMetadata>,
             payment: Vec<FungibleBucket>,
         ) -> (Bytes32, Vec<FungibleBucket>) {
-
             let hyperlane_message = HyperlaneMessage::new(
                 self.nonce,
                 self.local_domain,
@@ -242,10 +240,10 @@ mod mailbox {
         }
 
         pub fn process(
-            &mut self, 
-            metadata: Vec<u8>, 
-            raw_message: Vec<u8>, 
-            visible_components: Vec<ComponentAddress>
+            &mut self,
+            metadata: Vec<u8>,
+            raw_message: Vec<u8>,
+            visible_components: Vec<ComponentAddress>,
         ) -> () {
             let message: HyperlaneMessage = raw_message.clone().into();
 
@@ -266,7 +264,9 @@ mod mailbox {
             let recipient_component: ComponentAddress = message.recipient.into();
 
             // Call the ISM to verify the message
-            let recipient_ism = self.recipient_ism(recipient_component).expect("Neither mailbox nor receiver have specified an ISM");
+            let recipient_ism = self
+                .recipient_ism(recipient_component)
+                .expect("Neither mailbox nor receiver have specified an ISM");
             let result = ScryptoVmV1Api::object_call(
                 recipient_ism.as_node_id(),
                 "verify",

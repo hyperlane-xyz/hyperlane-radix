@@ -39,14 +39,11 @@ mod merkle_tree_hook {
     }
 
     impl MerkleTreeHook {
-
         pub fn instantiate(mailbox: ComponentAddress) -> Global<MerkleTreeHook> {
-
             // Create mailbox component rule to ensure that the "post_dispatch()" function can only
             // be called by the mailbox itself.
-            let mailbox_component_rule = rule!(require(
-                NonFungibleGlobalId::global_caller_badge(mailbox)
-            ));
+            let mailbox_component_rule =
+                rule!(require(NonFungibleGlobalId::global_caller_badge(mailbox)));
 
             Self {
                 mailbox,
