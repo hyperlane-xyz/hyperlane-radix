@@ -71,3 +71,93 @@ impl Into<Vec<u8>> for WarpPayload {
         RawWarpPayload::from(&self)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use hex;
+    use scrypto_test::prelude::*;
+    #[test]
+    pub fn warp_payload_new_zero() {
+        // Arrange & Act
+        let address: Bytes32 = Bytes32::zero();
+        let amount = Decimal::zero();
+        let payload = WarpPayload::new(address, amount);
+        let bytes: Vec<u8> = payload.into();
+
+        // Assert
+        assert_eq!(bytes.len(), 64);
+        assert!(bytes.iter().all(|&x| x == 0), "Not all bytes are zero");
+    }
+
+    #[test]
+    pub fn warp_payload_amount_encoding() {
+        // Arrange & Act
+        let address: Bytes32 = [1; 32].into();
+        let amount = Decimal::one();
+        let payload = WarpPayload::new(address, amount);
+        let bytes: Vec<u8> = payload.into();
+
+        // Assert
+        assert_eq!(bytes.len(), 64);
+        assert!(
+            bytes[..32].iter().all(|&x| x == 1),
+            "Not all bytes are zero"
+        );
+        assert!(
+            bytes[32..56].iter().all(|&x| x == 0),
+            "First amount bytes have to be zero"
+        );
+        assert_eq!(
+            bytes[56..64].to_vec(),
+            vec![13, 224, 182, 179, 167, 100, 0, 0]
+        );
+    }
+
+    #[test]
+    pub fn warp_payload_component_address() {
+        // Arrange
+        let mut ledger = LedgerSimulatorBuilder::new().build();
+        let (_public_key, _private_key, account) = ledger.new_allocated_account();
+
+        let address: Bytes32 = account.into();
+        let amount = Decimal::zero();
+        let payload = WarpPayload::new(address, amount);
+        let bytes: Vec<u8> = payload.clone().into();
+
+        // Act
+        let component_address = payload.component_address();
+
+        // Assert
+        assert_eq!(account, component_address);
+        assert_eq!(bytes.len(), 64);
+        assert!(
+            bytes[32..64].iter().all(|&x| x == 0),
+            "Amount has zo be zero"
+        );
+
+        let hex_str = bytes
+            .iter()
+            .map(|b| format!("{:02x}", b))
+            .collect::<String>();
+        assert_eq!(hex_str, "0000c1f7abd48c518b8ebdc6a35abfbe78583725a97eabdc99224571e0d11d420000000000000000000000000000000000000000000000000000000000000000")
+    }
+
+    #[test]
+    pub fn warp_payload_parse() {
+        // Arrange
+        let mut ledger = LedgerSimulatorBuilder::new().build();
+        let (_public_key, _private_key, account) = ledger.new_allocated_account();
+
+        let raw_message = "0000c1f7abd48c518b8ebdc6a35abfbe78583725a97eabdc99224571e0d11d420000000000000000000000000000000000000000000000000de0b6b3a7640000";
+        let bytes = hex::decode(raw_message).unwrap();
+
+        // Act
+        let payload = WarpPayload::from(&bytes);
+        let component_address = payload.component_address();
+
+        // Assert
+        assert_eq!(account, component_address);
+        assert_eq!(payload.amount, Decimal::one());
+    }
+}
