@@ -76,7 +76,6 @@ impl Into<Vec<u8>> for WarpPayload {
 mod tests {
     use super::*;
     use hex;
-    use scrypto_test::prelude::*;
     #[test]
     pub fn warp_payload_new_zero() {
         // Arrange & Act
@@ -117,9 +116,12 @@ mod tests {
     #[test]
     pub fn warp_payload_component_address() {
         // Arrange
-        let mut ledger = LedgerSimulatorBuilder::new().build();
-        let (_public_key, _private_key, account) = ledger.new_allocated_account();
-
+        let rb: [u8; 30] =
+            hex::decode("c1f7abd48c518b8ebdc6a35abfbe78583725a97eabdc99224571e0d11d42")
+                .unwrap()
+                .try_into()
+                .unwrap();
+        let account: ComponentAddress = ComponentAddress::new_or_panic(rb);
         let address: Bytes32 = account.into();
         let amount = Decimal::zero();
         let payload = WarpPayload::new(address, amount);
@@ -130,6 +132,10 @@ mod tests {
 
         // Assert
         assert_eq!(account, component_address);
+        assert_eq!(
+            component_address.to_vec(),
+            hex::decode("c1f7abd48c518b8ebdc6a35abfbe78583725a97eabdc99224571e0d11d42").unwrap()
+        );
         assert_eq!(bytes.len(), 64);
         assert!(
             bytes[32..64].iter().all(|&x| x == 0),
@@ -146,8 +152,13 @@ mod tests {
     #[test]
     pub fn warp_payload_parse() {
         // Arrange
-        let mut ledger = LedgerSimulatorBuilder::new().build();
-        let (_public_key, _private_key, account) = ledger.new_allocated_account();
+        // Account creation is deterministic and matches the address tested below
+        let rb: [u8; 30] =
+            hex::decode("c1f7abd48c518b8ebdc6a35abfbe78583725a97eabdc99224571e0d11d42")
+                .unwrap()
+                .try_into()
+                .unwrap();
+        let account: ComponentAddress = ComponentAddress::new_or_panic(rb);
 
         let raw_message = "0000c1f7abd48c518b8ebdc6a35abfbe78583725a97eabdc99224571e0d11d420000000000000000000000000000000000000000000000000de0b6b3a7640000";
         let bytes = hex::decode(raw_message).unwrap();
