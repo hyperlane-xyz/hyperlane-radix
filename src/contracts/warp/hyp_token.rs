@@ -14,8 +14,8 @@ pub struct HypSyntheticTokenMetadata {
 
 #[derive(ScryptoSbor)]
 pub enum HypTokenType {
-    COLLATERAL(ResourceAddress),
-    SYNTHETIC(HypSyntheticTokenMetadata),
+    Collateral(ResourceAddress),
+    Synthetic(HypSyntheticTokenMetadata),
 }
 
 #[derive(ScryptoSbor)]
@@ -53,6 +53,7 @@ mod hyp_token {
             // Public
             transfer_remote => PUBLIC;
             ism => PUBLIC;
+            quote_remote_transfer => PUBLIC;
             // Mailbox Only
             handle => restrict_to: [mailbox_component];
             // Owner Only
@@ -98,8 +99,8 @@ mod hyp_token {
                     "name" => format!(
                         "Hyperlane {} Token Owner Badge {}",
                         (match token_type {
-                            HypTokenType::SYNTHETIC(_) => "Synthetic",
-                            HypTokenType::COLLATERAL(_) => "Collateral"
+                            HypTokenType::Synthetic(_) => "Synthetic",
+                            HypTokenType::Collateral(_) => "Collateral"
                         }),
                         Runtime::bech32_encode_address(component_address)
                     ), locked;
@@ -109,7 +110,7 @@ mod hyp_token {
 
             let mut resource_manager: Option<FungibleResourceManager> = None;
             let vault: FungibleVault = match &token_type {
-                HypTokenType::SYNTHETIC(metadata) => {
+                HypTokenType::Synthetic(metadata) => {
                     let bucket = ResourceBuilder::new_fungible(OwnerRole::None)
                         .metadata(metadata!(
                             init {
@@ -133,7 +134,7 @@ mod hyp_token {
 
                     FungibleVault::with_bucket(bucket)
                 }
-                HypTokenType::COLLATERAL(resource_address) => FungibleVault::new(*resource_address),
+                HypTokenType::Collateral(resource_address) => FungibleVault::new(*resource_address),
             };
 
             // populate a GumballMachine struct and instantiate a new component
@@ -216,11 +217,11 @@ mod hyp_token {
             let token_amount = amount.amount();
 
             match self.token_type {
-                HypTokenType::SYNTHETIC(_) => {
+                HypTokenType::Synthetic(_) => {
                     // Burn Synthetic token
                     self.resource_manager.unwrap().burn(amount);
                 }
-                HypTokenType::COLLATERAL(_) => {
+                HypTokenType::Collateral(_) => {
                     // Transfer collateral from user into the vault
                     self.vault.put(amount);
                 }
@@ -266,6 +267,43 @@ mod hyp_token {
             bucket
         }
 
+        pub fn quote_remote_transfer(
+            &self,
+            destination_domain: u32,
+            recipient: Bytes32,
+            amount: Decimal,
+        ) -> IndexMap<ResourceAddress, Decimal> {
+            let remote_router = self
+                .enrolled_routers
+                .get(&destination_domain)
+                .expect("No router enrolled for domain");
+
+            let payload: WarpPayload = WarpPayload::new(recipient, amount).into();
+            let payload: Vec<u8> = payload.into();
+
+            let standard_hook_metadata = StandardHookMetadata {
+                gas_limit: remote_router.gas,
+                custom_bytes: None,
+            };
+
+            let result = ScryptoVmV1Api::object_call(
+                self.mailbox.as_node_id(),
+                "quote_dispatch",
+                scrypto_args!(
+                    destination_domain,
+                    remote_router.recipient,
+                    payload,
+                    None::<ComponentAddress>,
+                    Some(standard_hook_metadata)
+                ),
+            );
+
+            let result: IndexMap<ResourceAddress, Decimal> =
+                scrypto_decode(&result).expect("Failed to decode dispatch result");
+
+            result
+        }
+
         /*
             This method is called by the mailbox when a message is sent to this component.
             Due to resource management in radix, the caller must provide a list
@@ -296,10 +334,10 @@ mod hyp_token {
             }
 
             let share: FungibleBucket = match self.token_type {
-                HypTokenType::SYNTHETIC(_) => {
+                HypTokenType::Synthetic(_) => {
                     self.resource_manager.unwrap().mint(warp_payload.amount)
                 }
-                HypTokenType::COLLATERAL(_) => self.vault.take(warp_payload.amount),
+                HypTokenType::Collateral(_) => self.vault.take(warp_payload.amount),
             };
 
             ScryptoVmV1Api::object_call(
