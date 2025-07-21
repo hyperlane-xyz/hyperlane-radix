@@ -604,6 +604,7 @@ name = "hyperlane-radix"
 version = "1.0.0"
 dependencies = [
  "getrandom",
+ "hex",
  "k256",
  "radix-common",
  "scrypto",
