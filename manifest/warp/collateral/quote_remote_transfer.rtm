@@ -1,0 +1,12 @@
+CALL_METHOD
+    Address("component_sim1cptxxxxxxxxxfaucetxxxxxxxxx000527798379xxxxxxxxxhkrefh")
+    "lock_fee"
+    Decimal("5000")
+;
+CALL_METHOD
+    Address("${hyp_collateral}")
+    "quote_remote_transfer"
+    1337u32
+    Bytes("0000000000000000000000000000000000000000000000000000000000000001")
+    Decimal("1.0")
+;

@@ -52,6 +52,7 @@ mod hyp_token {
             // Public
             transfer_remote => PUBLIC;
             ism => PUBLIC;
+            quote_remote_transfer => PUBLIC;
             // Mailbox Only
             handle => restrict_to: [mailbox_component];
             // Owner Only
@@ -270,6 +271,40 @@ mod hyp_token {
                 scrypto_decode(&result).expect("Failed to decode dispatch result");
 
             bucket
+        }
+
+        pub fn quote_remote_transfer(
+            &self,
+            destination_domain: u32,
+            recipient: Bytes32,
+            amount: Decimal,
+        ) -> IndexMap<ResourceAddress, Decimal> {
+            let remote_router = self
+                .enrolled_routers
+                .get(&destination_domain)
+                .expect("No router enrolled for domain");
+
+            let payload: WarpPayload = WarpPayload::new(recipient, amount).into();
+            let payload: Vec<u8> = payload.into();
+
+            let standard_hook_metadata = StandardHookMetadata {
+                gas_limit: remote_router.gas,
+                custom_bytes: None,
+            };
+
+            let result = ScryptoVmV1Api::object_call(
+                self.mailbox.as_node_id(),
+                "quote_dispatch",
+                scrypto_args!(
+                    destination_domain,
+                    remote_router.recipient,
+                    payload,
+                    None::<ComponentAddress>,
+                    Some(standard_hook_metadata)
+                ),
+            );
+
+            scrypto_decode(&result).expect("Failed to decode dispatch result")
         }
 
         /*
