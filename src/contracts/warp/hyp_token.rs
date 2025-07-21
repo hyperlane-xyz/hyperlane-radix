@@ -304,10 +304,7 @@ mod hyp_token {
                 ),
             );
 
-            let result: IndexMap<ResourceAddress, Decimal> =
-                scrypto_decode(&result).expect("Failed to decode dispatch result");
-
-            result
+            scrypto_decode(&result).expect("Failed to decode dispatch result")
         }
 
         /*
