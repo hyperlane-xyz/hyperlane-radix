@@ -1,0 +1,25 @@
+name: rust-fmt.yml
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  fmt:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Rust
+        uses: actions/setup-rust@v1
+        with:
+          rust-version: stable
+
+      - name: Install rustfmt
+        run: rustup component add rustfmt
+
+      - name: Check formatting with cargo fmt
+        run: cargo fmt --all -- --check
