@@ -5,17 +5,16 @@ use crate::{
 use scrypto::prelude::*;
 
 #[derive(ScryptoSbor)]
-pub struct HypSyntheticTokenMetadata {
-    name: String,
-    symbol: String,
-    description: String,
-    divisibility: u8,
-}
-
-#[derive(ScryptoSbor)]
 pub enum HypTokenType {
-    Collateral(ResourceAddress),
-    Synthetic(HypSyntheticTokenMetadata),
+    Collateral {
+        collateral_address: ResourceAddress,
+    },
+    Synthetic {
+        name: String,
+        symbol: String,
+        description: String,
+        divisibility: u8,
+    },
 }
 
 #[derive(ScryptoSbor)]
@@ -99,8 +98,8 @@ mod hyp_token {
                     "name" => format!(
                         "Hyperlane {} Token Owner Badge {}",
                         (match token_type {
-                            HypTokenType::Synthetic(_) => "Synthetic",
-                            HypTokenType::Collateral(_) => "Collateral"
+                            HypTokenType::Synthetic {..} => "Synthetic",
+                            HypTokenType::Collateral {..} => "Collateral"
                         }),
                         Runtime::bech32_encode_address(component_address)
                     ), locked;
@@ -110,13 +109,18 @@ mod hyp_token {
 
             let mut resource_manager: Option<FungibleResourceManager> = None;
             let vault: FungibleVault = match &token_type {
-                HypTokenType::Synthetic(metadata) => {
+                HypTokenType::Synthetic {
+                    name,
+                    symbol,
+                    description,
+                    divisibility,
+                } => {
                     let bucket = ResourceBuilder::new_fungible(OwnerRole::None)
                         .metadata(metadata!(
                             init {
-                                "name" => metadata.name.clone(), locked;
-                                "symbol" => metadata.symbol.clone(), locked;
-                                "description" => metadata.description.clone(), locked;
+                                "name" => name.clone(), locked;
+                                "symbol" => symbol.clone(), locked;
+                                "description" => description.clone(), locked;
                             }
                         ))
                         .mint_roles(mint_roles! {
@@ -127,14 +131,16 @@ mod hyp_token {
                             burner => rule!(require(global_caller(component_address)));
                             burner_updater => rule!(deny_all);
                         })
-                        .divisibility(metadata.divisibility)
+                        .divisibility(*divisibility)
                         .mint_initial_supply(0);
 
                     resource_manager = Some(bucket.resource_manager());
 
                     FungibleVault::with_bucket(bucket)
                 }
-                HypTokenType::Collateral(resource_address) => FungibleVault::new(*resource_address),
+                HypTokenType::Collateral { collateral_address } => {
+                    FungibleVault::new(*collateral_address)
+                }
             };
 
             // populate a GumballMachine struct and instantiate a new component
@@ -217,11 +223,11 @@ mod hyp_token {
             let token_amount = amount.amount();
 
             match self.token_type {
-                HypTokenType::Synthetic(_) => {
+                HypTokenType::Synthetic { .. } => {
                     // Burn Synthetic token
                     self.resource_manager.unwrap().burn(amount);
                 }
-                HypTokenType::Collateral(_) => {
+                HypTokenType::Collateral { .. } => {
                     // Transfer collateral from user into the vault
                     self.vault.put(amount);
                 }
@@ -334,10 +340,10 @@ mod hyp_token {
             }
 
             let share: FungibleBucket = match self.token_type {
-                HypTokenType::Synthetic(_) => {
+                HypTokenType::Synthetic { .. } => {
                     self.resource_manager.unwrap().mint(warp_payload.amount)
                 }
-                HypTokenType::Collateral(_) => self.vault.take(warp_payload.amount),
+                HypTokenType::Collateral { .. } => self.vault.take(warp_payload.amount),
             };
 
             ScryptoVmV1Api::object_call(
