@@ -1,3 +1,5 @@
+mod common;
+
 use scrypto_test::prelude::*;
 
 use hyperlane_radix::{types::recover_eth_address, *};
