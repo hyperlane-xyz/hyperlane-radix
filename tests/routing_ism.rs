@@ -6,8 +6,7 @@ mod common;
 
 fn create_routing_ism(
     suite: &mut Suite,
-    domains: Vec<u32>,
-    addresses: Vec<ComponentAddress>,
+    routes: Vec<(u32, ComponentAddress)>,
 ) -> TransactionReceipt {
     let manifest = ManifestBuilder::new()
         .lock_fee_from_faucet()
@@ -15,7 +14,7 @@ fn create_routing_ism(
             suite.package_address,
             "RoutingIsm",
             "instantiate",
-            manifest_args!(domains, addresses),
+            manifest_args!(routes),
         )
         .deposit_entire_worktop(suite.account.address)
         .build();
@@ -93,23 +92,15 @@ fn call_dummy_verify(
 #[test]
 fn test_create_empty_routing_ism() {
     let mut suite = common::setup();
-    let receipt = create_routing_ism(&mut suite, vec![], vec![]);
+    let receipt = create_routing_ism(&mut suite, vec![]);
     receipt.expect_commit_success();
-}
-
-#[test]
-fn test_create_invalid_routing_ism() {
-    let mut suite = common::setup();
-    let receipt = create_routing_ism(&mut suite, vec![1], vec![]);
-    assert!(format!("{:?}", receipt.expect_commit_failure())
-        .contains("domains and ism array must have the same length"));
 }
 
 #[test]
 fn test_domain_does_not_exist() {
     // Arrange
     let mut suite = common::setup();
-    let receipt = create_routing_ism(&mut suite, vec![], vec![]);
+    let receipt = create_routing_ism(&mut suite, vec![]);
     receipt.expect_commit_success();
 
     let component_address = receipt.expect_commit_success().new_component_addresses()[0];
@@ -125,7 +116,7 @@ fn test_domain_does_not_exist() {
 fn test_non_owner_can_not_update_route() {
     // Arrange
     let mut suite = common::setup();
-    let receipt = create_routing_ism(&mut suite, vec![], vec![]);
+    let receipt = create_routing_ism(&mut suite, vec![]);
     receipt.expect_commit_success();
 
     let component_address = receipt.expect_commit_success().new_component_addresses()[0];
@@ -160,7 +151,7 @@ fn test_non_owner_can_not_update_route() {
 fn test_add_new_route() {
     // Arrange
     let mut suite = common::setup();
-    let receipt = create_routing_ism(&mut suite, vec![], vec![]);
+    let receipt = create_routing_ism(&mut suite, vec![]);
     receipt.expect_commit_success();
 
     let component_address = receipt.expect_commit_success().new_component_addresses()[0];
@@ -199,7 +190,7 @@ fn test_remove_route() {
     let mut suite = common::setup();
     let domain: u32 = 1;
     let ism_component = create_noop_ism(&mut suite);
-    let receipt = create_routing_ism(&mut suite, vec![domain], vec![ism_component]);
+    let receipt = create_routing_ism(&mut suite, vec![(domain, ism_component)]);
     receipt.expect_commit_success();
 
     let component_address = receipt.expect_commit_success().new_component_addresses()[0];
