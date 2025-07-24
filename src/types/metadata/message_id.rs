@@ -67,3 +67,20 @@ impl From<Vec<u8>> for MultisigIsmMessageIdMetadata {
         }
     }
 }
+
+impl Into<Vec<u8>> for MultisigIsmMessageIdMetadata {
+    fn into(self) -> Vec<u8> {
+        let mut bytes = Vec::new();
+
+        bytes.extend_from_slice(&self.origin_merkle_tree_hook.as_ref());
+        bytes.extend_from_slice(&self.merkle_root.as_ref());
+        bytes.extend_from_slice(&self.merkle_index.to_be_bytes());
+
+        for sig in self.validator_signatures {
+            let sig_bytes = sig.0;
+            bytes.extend_from_slice(&sig_bytes);
+        }
+
+        bytes
+    }
+}

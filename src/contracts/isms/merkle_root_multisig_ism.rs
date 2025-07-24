@@ -7,7 +7,7 @@ use scrypto::prelude::*;
 // TODO: make this implement the ism trait
 
 #[blueprint]
-mod merkle_root_mutlsig_ism {
+mod merkle_root_multisig_ism {
 
     struct MerkleRootMultisigIsm {
         validators: Vec<EthAddress>,

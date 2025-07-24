@@ -10,7 +10,6 @@
 //! code is also not audited.  Additionally, the documentation for these crates
 //! leaves a lot to be desired.  This works but the choices may not be optimal
 //! for future on-ledger use
-use k256::ecdsa::{RecoveryId, Signature, VerifyingKey};
 use scrypto::prelude::*;
 
 use crate::types::Bytes32;
@@ -22,6 +21,12 @@ pub struct EthAddress([u8; 20]);
 impl From<Hash> for EthAddress {
     fn from(value: Hash) -> Self {
         EthAddress(value.lower_bytes())
+    }
+}
+
+impl From<[u8; 20]> for EthAddress {
+    fn from(value: [u8; 20]) -> Self {
+        EthAddress(value)
     }
 }
 
@@ -66,24 +71,24 @@ pub fn announcement_digest(
 
 /// recover the eth address from the signature of the given hash
 pub fn recover_eth_address(digest: &[u8], signature: &Secp256k1Signature) -> EthAddress {
-    let mut signature = signature.0.clone();
 
-    // Sub 27 of the recovery id according to this - https://eips.ethereum.org/EIPS/eip-155
-    signature[64] -= 27;
+    // For the CryptoUtils the recovery Id must be moved to the beginning
+    // And it must be converted from an eth id (27/28) to a normal id (0/1)
+    let mut signature : Vec<u8> = signature.0.try_into().unwrap();
+    let last = signature.pop().unwrap();
+    signature.insert(0, last - 27);
 
-    let recovery_id =
-        RecoveryId::from_byte(signature[64]).expect("recover: invalid recovery on signature");
+    let signature = Secp256k1Signature(signature.try_into().unwrap());
+    let message_hash = Hash(digest.try_into().unwrap());
 
-    // k256 expects the signature to not include the recovery id
-    let signature = &signature[..64];
-
-    let signature = Signature::from_slice(signature).expect("recover: invalid signature");
-    let pubkey = VerifyingKey::recover_from_prehash(digest, &signature, recovery_id)
-        .expect("verify: failed to recover public key");
+    let pubkey = CryptoUtils::secp256k1_ecdsa_verify_and_key_recover_uncompressed(
+        message_hash,
+        signature,
+    );
 
     // ethereum address is the hash of the uncompressed public key
     // exculde the first byte - which is always 0x4 to indicate Secp256k1
-    let pubkey_bytes = pubkey.to_encoded_point(false).to_bytes();
+    let pubkey_bytes = pubkey.0;
     let address = keccak256_hash(&pubkey_bytes[1..]);
     address.into()
 }

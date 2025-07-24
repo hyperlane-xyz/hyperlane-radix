@@ -13,12 +13,12 @@ pub fn verify_multisig(
 
     for i in 0..threshold {
         let signature = signatures
-            .get(i as usize)
-            .expect("MessageIdMultisig: unable to get signature at "); // TODO: improve error message
+            .get(i)
+            .expect(format!("MessageIdMultisig: unable to get signature at {}", i).as_str());
 
         let signer = recover_eth_address(&digest.0, signature);
 
-        while validator_index < validator_count && signer != validators[i] {
+        while validator_index < validator_count && signer != validators[validator_index] {
             validator_index += 1;
         }
 
