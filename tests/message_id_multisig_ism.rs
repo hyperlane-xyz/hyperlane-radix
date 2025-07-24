@@ -31,6 +31,20 @@ fn create_message_id_multisig_ism(
     receipt
 }
 
+fn metadata_to_vec(msg: &MultisigIsmMessageIdMetadata) -> Vec<u8> {
+    let mut bytes = Vec::new();
+
+    bytes.extend_from_slice(msg.origin_merkle_tree_hook.as_ref());
+    bytes.extend_from_slice(msg.merkle_root.as_ref());
+    bytes.extend_from_slice(msg.merkle_index.to_be_bytes().as_ref());
+
+    msg.validator_signatures.iter().for_each(|signature| {
+        bytes.extend_from_slice(signature.as_ref());
+    });
+
+    bytes
+}
+
 fn verify(
     suite: &mut Suite,
     component_address: ComponentAddress,
@@ -80,7 +94,12 @@ fn test_valid_relayer_message() {
     let component_address = receipt.expect_commit_success().new_component_addresses()[0];
 
     // Act
-    let receipt = verify(&mut suite, component_address, metadata.into(), message);
+    let receipt = verify(
+        &mut suite,
+        component_address,
+        metadata_to_vec(&metadata),
+        message,
+    );
 
     // Assert
     let call_result = receipt.expect_commit_success().outcome.expect_success();
@@ -112,7 +131,12 @@ fn test_invalid_relayer_message() {
     let component_address = receipt.expect_commit_success().new_component_addresses()[0];
 
     // Act
-    let receipt = verify(&mut suite, component_address, metadata.into(), message);
+    let receipt = verify(
+        &mut suite,
+        component_address,
+        metadata_to_vec(&metadata),
+        message,
+    );
 
     // Assert
     assert!(format!("{:?}", receipt.expect_commit_failure())
