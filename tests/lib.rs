@@ -1,8 +1,6 @@
-use scrypto_test::prelude::*;
-
-use hyperlane_radix::{types::recover_eth_address, *};
-
 use crate::types::HyperlaneMessage;
+use hyperlane_radix::{types::recover_eth_address, *};
+use scrypto_test::prelude::*;
 
 #[test]
 fn test_recover_address() {

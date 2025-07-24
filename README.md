@@ -49,8 +49,6 @@ scrypto test -- --nocapture
 
 - `k256` should be checked or changed to an audited version
 - Trait problem, a component like hooks should always have a given interface
-- ISM:
-  - Routing ISM
 - IGP:
   - IGP set destination gas config methods
   - Public / Protected Methods enforcen

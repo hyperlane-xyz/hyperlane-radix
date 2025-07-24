@@ -22,11 +22,9 @@ struct GasPayment {
     destination_domain: u32,
     // TODO: I believe decimal is an incorrect use here, we should instead use I192
     gas_amount: Decimal,
-    payment: Decimal,
+    payment: Decimal, // amount in XRD
+                      // TODO: resource address
 }
-
-// TODO: create a hook trait that each hook has to implement
-// it should implement a set of default methods
 
 #[blueprint]
 #[events(GasPayment)]

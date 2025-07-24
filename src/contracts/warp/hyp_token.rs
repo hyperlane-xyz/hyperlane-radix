@@ -143,7 +143,6 @@ mod hyp_token {
                 }
             };
 
-            // populate a GumballMachine struct and instantiate a new component
             let component = Self {
                 token_type,
                 mailbox,
