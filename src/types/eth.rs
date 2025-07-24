@@ -75,6 +75,7 @@ pub fn recover_eth_address(digest: &Hash, signature: &Secp256k1Signature) -> Eth
     // And it must be converted from an eth id (27/28) to a normal id (0/1)
     let mut signature: Vec<u8> = signature.to_vec();
     let last = signature.pop().unwrap();
+    // Sub 27 of the recovery id according to this - https://eips.ethereum.org/EIPS/eip-155
     signature.insert(0, last - 27);
 
     let signature = Secp256k1Signature(signature.try_into().unwrap());
