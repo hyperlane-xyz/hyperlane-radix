@@ -20,6 +20,8 @@ mod mailbox {
             // Public Lookup
             local_domain => PUBLIC;
             delivered => PUBLIC;
+            nonce => PUBLIC;
+            processed => PUBLIC;
 
             // ISM
             default_ism => PUBLIC;
@@ -33,7 +35,7 @@ mod mailbox {
             required_hook => PUBLIC;
             set_required_hook => restrict_to: [OWNER];
 
-            is_latest_dispatched => PUBLIC;
+            latest_dispatched_id => PUBLIC;
             dispatch => PUBLIC;
             quote_dispatch => PUBLIC;
             process => PUBLIC;
@@ -98,6 +100,14 @@ mod mailbox {
             self.local_domain
         }
 
+        pub fn nonce(&self) -> u32 {
+            self.nonce
+        }
+
+        pub fn processed(&self) -> u32 {
+            self.process_sequence
+        }
+
         pub fn delivered(&self, message_id: Bytes32) -> bool {
             self.processed_messages.get(&message_id).is_some()
         }
@@ -126,8 +136,8 @@ mod mailbox {
             self.required_hook = Some(address);
         }
 
-        pub fn is_latest_dispatched(&self, id: Bytes32) -> bool {
-            self.latest_dispatched_message == id
+        pub fn latest_dispatched_id(&self) -> Bytes32 {
+            self.latest_dispatched_message
         }
 
         pub fn dispatch(

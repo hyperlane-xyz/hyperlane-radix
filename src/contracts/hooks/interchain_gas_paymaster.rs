@@ -44,6 +44,7 @@ mod interchain_gas_paymaster {
             pay_for_gas => PUBLIC;
             post_dispatch => PUBLIC;
             quote_dispatch => PUBLIC;
+            sequence => PUBLIC;
 
             // Owner only
             set_destination_gas_configs => restrict_to: [OWNER];
@@ -99,6 +100,10 @@ mod interchain_gas_paymaster {
 
         pub fn hook_type(&self) -> Types {
             Types::INTERCHAINGASPAYMASTER
+        }
+
+        pub fn sequence(&self) -> u32 {
+            self.sequence
         }
 
         fn get_config(&self, destination: u32) -> KeyValueEntryRef<DestinationGasConfig> {
