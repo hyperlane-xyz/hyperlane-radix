@@ -1,7 +1,7 @@
 use crate::common::Suite;
-use scrypto_test::prelude::*;
-use hyperlane_radix::types::EthAddress;
 use hyperlane_radix::types::metadata::MultisigIsmMessageIdMetadata;
+use hyperlane_radix::types::EthAddress;
+use scrypto_test::prelude::*;
 
 mod common;
 
@@ -31,7 +31,12 @@ fn create_message_id_multisig_ism(
     receipt
 }
 
-fn verify(suite: &mut Suite, component_address: ComponentAddress, metadata: Vec<u8>, message: Vec<u8>) -> TransactionReceipt {
+fn verify(
+    suite: &mut Suite,
+    component_address: ComponentAddress,
+    metadata: Vec<u8>,
+    message: Vec<u8>,
+) -> TransactionReceipt {
     let manifest = ManifestBuilder::new()
         .lock_fee_from_faucet()
         .call_method(
@@ -53,11 +58,13 @@ fn verify(suite: &mut Suite, component_address: ComponentAddress, metadata: Vec<
 
 #[test]
 fn test_valid_relayer_message() {
-
     // Arrange
     let message = hex::decode("0300000000000000010000000000000000000000007ff2bf58c38a41ad7c9cbc14e780e8a7edbbd48d00002105000000000000000000000000811808dd29ba8b0fc6c0ec0b5537035e5974516248656c6c6f21").unwrap();
 
-    let validator: [u8; 20] = hex::decode("03c842db86a6a3e524d4a6615390c1ea8e2b9541").unwrap().try_into().unwrap();
+    let validator: [u8; 20] = hex::decode("03c842db86a6a3e524d4a6615390c1ea8e2b9541")
+        .unwrap()
+        .try_into()
+        .unwrap();
 
     let metadata: MultisigIsmMessageIdMetadata = MultisigIsmMessageIdMetadata {
         origin_merkle_tree_hook: Hash::from_str("00000000000000000000000048e6c30b97748d1e2e03bf3e9fbe3890ca5f8cca").unwrap().into(),
@@ -82,11 +89,13 @@ fn test_valid_relayer_message() {
 
 #[test]
 fn test_invalid_relayer_message() {
-
     // Arrange
     let message = hex::decode("0300000000000000010000000000000000000000007ff2bf58c38a41ad7c9cbc14e780e8a7edbbd48d00002105000000000000000000000000811808dd29ba8b0fc6c0ec0b5537035e5974516248656c6c6f21").unwrap();
 
-    let validator: [u8; 20] = hex::decode("03c842db86a6a3e524d4a6615390c1ea8e2b9541").unwrap().try_into().unwrap();
+    let validator: [u8; 20] = hex::decode("03c842db86a6a3e524d4a6615390c1ea8e2b9541")
+        .unwrap()
+        .try_into()
+        .unwrap();
 
     let metadata: MultisigIsmMessageIdMetadata = MultisigIsmMessageIdMetadata {
         origin_merkle_tree_hook: Hash::from_str("00000000000000000000000048e6c30b97748d1e2e03bf3e9fbe3890ca5f8cca").unwrap().into(),

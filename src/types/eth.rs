@@ -71,20 +71,17 @@ pub fn announcement_digest(
 
 /// recover the eth address from the signature of the given hash
 pub fn recover_eth_address(digest: &[u8], signature: &Secp256k1Signature) -> EthAddress {
-
     // For the CryptoUtils the recovery Id must be moved to the beginning
     // And it must be converted from an eth id (27/28) to a normal id (0/1)
-    let mut signature : Vec<u8> = signature.0.try_into().unwrap();
+    let mut signature: Vec<u8> = signature.0.try_into().unwrap();
     let last = signature.pop().unwrap();
     signature.insert(0, last - 27);
 
     let signature = Secp256k1Signature(signature.try_into().unwrap());
     let message_hash = Hash(digest.try_into().unwrap());
 
-    let pubkey = CryptoUtils::secp256k1_ecdsa_verify_and_key_recover_uncompressed(
-        message_hash,
-        signature,
-    );
+    let pubkey =
+        CryptoUtils::secp256k1_ecdsa_verify_and_key_recover_uncompressed(message_hash, signature);
 
     // ethereum address is the hash of the uncompressed public key
     // exculde the first byte - which is always 0x4 to indicate Secp256k1
