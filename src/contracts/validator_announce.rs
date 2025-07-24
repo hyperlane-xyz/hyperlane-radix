@@ -63,7 +63,7 @@ mod validator_announce {
             let signature = Secp256k1Signature::try_from(signature.as_slice())
                 .expect("ValidatorAnnounce: failed to parse signature");
 
-            let signer = recover_eth_address(announcement_digest.as_slice(), &signature);
+            let signer = recover_eth_address(&announcement_digest, &signature);
 
             if signer != address {
                 panic!("ValidatorAnnounce: signer does not match passed address")

@@ -76,10 +76,9 @@ impl Into<Vec<u8>> for MultisigIsmMessageIdMetadata {
         bytes.extend_from_slice(&self.merkle_root.as_ref());
         bytes.extend_from_slice(&self.merkle_index.to_be_bytes());
 
-        for sig in self.validator_signatures {
-            let sig_bytes = sig.0;
-            bytes.extend_from_slice(&sig_bytes);
-        }
+        self.validator_signatures.iter().for_each(|signature| {
+            bytes.extend_from_slice(signature.as_ref());
+        });
 
         bytes
     }

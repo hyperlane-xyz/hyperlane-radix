@@ -16,7 +16,7 @@ pub fn verify_multisig(
             .get(i)
             .expect(format!("MessageIdMultisig: unable to get signature at {}", i).as_str());
 
-        let signer = recover_eth_address(&digest.0, signature);
+        let signer = recover_eth_address(&digest, signature);
 
         while validator_index < validator_count && signer != validators[validator_index] {
             validator_index += 1;
