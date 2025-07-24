@@ -23,6 +23,7 @@ mod merkle_tree_hook {
         },
         methods {
             // Public
+            hook_type => PUBLIC;
             count => PUBLIC;
             root => PUBLIC;
             latest_checkpoint => PUBLIC;
@@ -58,7 +59,7 @@ mod merkle_tree_hook {
             .globalize()
         }
 
-        pub fn hook_type() -> Types {
+        pub fn hook_type(&self) -> Types {
             Types::MERKLETREE
         }
 

@@ -4,10 +4,6 @@ use crate::types::{HyperlaneMessage, MESSAGE_VERSION};
 use scrypto::blueprint;
 use scrypto::prelude::*;
 
-/// TODO: populate this field with block height and tx sender address
-#[derive(ScryptoSbor, ScryptoEvent)]
-struct Delivery {}
-
 #[blueprint]
 #[events(
     InstantiationEvent,
@@ -18,7 +14,6 @@ struct Delivery {}
 )]
 mod mailbox {
 
-    // better mod names
     enable_method_auth! {
         // decide which methods are public and which are restricted to the component's owner
         methods {
@@ -58,6 +53,9 @@ mod mailbox {
 
         // latests dispatched message, used for auth in hooks
         latest_dispatched_message: Bytes32,
+
+        // sequence for process, used for better indexing
+        process_sequence: u32,
     }
 
     impl Mailbox {
@@ -82,6 +80,7 @@ mod mailbox {
                 required_hook: None,
                 processed_messages: KeyValueStore::new(),
                 latest_dispatched_message: Bytes32::zero(),
+                process_sequence: 0,
             }
             .instantiate()
             .prepare_to_globalize(OwnerRole::Fixed(rule!(require(
@@ -157,7 +156,6 @@ mod mailbox {
 
             let default_hook = hook.or(self.default_hook);
             if let Some(default_hook) = default_hook {
-                // TODO: maybe we can use Global<T> for this, not sure tho
                 let result = ScryptoVmV1Api::object_call(
                     default_hook.as_node_id(),
                     "post_dispatch",
@@ -167,7 +165,6 @@ mod mailbox {
                 payment = scrypto_decode(&result).expect("Failed to decode post_dispatch result");
             }
             if let Some(required_hook) = self.required_hook {
-                // TODO: maybe we can use Global<T> for this, not sure tho
                 let result = ScryptoVmV1Api::object_call(
                     required_hook.as_node_id(),
                     "post_dispatch",
@@ -177,9 +174,16 @@ mod mailbox {
                 payment = scrypto_decode(&result).expect("Failed to decode post_dispatch result");
             }
 
+            // the dispatch sequence is equal to the nonce of the message
+            Runtime::emit_event(DispatchIdEvent {
+                message_id,
+                sequence: hyperlane_message.nonce,
+            });
+
             Runtime::emit_event(DispatchEvent {
                 destination: destination_domain,
                 recipient: recipient_address,
+                sequence: hyperlane_message.nonce,
                 message: hyperlane_message.into(),
             });
 
@@ -244,7 +248,7 @@ mod mailbox {
             metadata: Vec<u8>,
             raw_message: Vec<u8>,
             visible_components: Vec<ComponentAddress>,
-        ) -> () {
+        ) {
             let message: HyperlaneMessage = raw_message.clone().into();
 
             if self.local_domain != message.destination {
@@ -283,16 +287,20 @@ mod mailbox {
                 origin: message.origin,
                 sender: message.sender,
                 recipient: message.recipient,
+                sequence: self.process_sequence,
             });
-            Runtime::emit_event(ProcessIdEvent { message_id });
+            Runtime::emit_event(ProcessIdEvent {
+                message_id,
+                sequence: self.process_sequence,
+            });
+
+            self.process_sequence += 1;
 
             ScryptoVmV1Api::object_call(
                 recipient_component.as_node_id(),
                 "handle",
                 scrypto_args!(raw_message, visible_components),
             );
-
-            ()
         }
 
         /// Returns the ISM (Interchain Security Module) for the given recipient address.
@@ -301,7 +309,8 @@ mod mailbox {
             let result =
                 ScryptoVmV1Api::object_call(recipient.as_node_id(), "ism", scrypto_args!());
 
-            let return_value: Option<ComponentAddress> = scrypto_decode(&result).unwrap(); // TODO: error handling
+            let return_value: Option<ComponentAddress> =
+                scrypto_decode(&result).expect("Failed to get ISM from recipient component");
 
             return_value.or(self.default_ism)
         }
@@ -316,18 +325,21 @@ pub struct InstantiationEvent {
 #[derive(ScryptoSbor, ScryptoEvent)]
 pub struct DispatchEvent {
     pub destination: u32,
-    pub recipient: Bytes32, // TODO: maybe encode this as hex string. I know there are built in function for parsing Component / Resource Addresses from and to hex strings
+    pub recipient: Bytes32,
     pub message: Vec<u8>,
+    pub sequence: u32,
 }
 
 #[derive(ScryptoSbor, ScryptoEvent)]
 pub struct DispatchIdEvent {
     pub message_id: Bytes32,
+    pub sequence: u32,
 }
 
 #[derive(ScryptoSbor, ScryptoEvent)]
 pub struct ProcessIdEvent {
     pub message_id: Bytes32,
+    pub sequence: u32,
 }
 
 #[derive(ScryptoSbor, ScryptoEvent)]
@@ -335,4 +347,5 @@ pub struct ProcessEvent {
     pub origin: u32,
     pub sender: Bytes32,
     pub recipient: Bytes32,
+    pub sequence: u32,
 }
