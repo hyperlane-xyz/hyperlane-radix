@@ -23,10 +23,10 @@ mod merkle_tree_hook {
         },
         methods {
             // Public
+            hook_type => PUBLIC;
             count => PUBLIC;
             root => PUBLIC;
             latest_checkpoint => PUBLIC;
-            is_latest_dispatched => PUBLIC;
             quote_dispatch => PUBLIC;
             // Mailbox Only
             post_dispatch => restrict_to: [mailbox_component];
@@ -58,7 +58,7 @@ mod merkle_tree_hook {
             .globalize()
         }
 
-        pub fn hook_type() -> Types {
+        pub fn hook_type(&self) -> Types {
             Types::MERKLETREE
         }
 
@@ -72,16 +72,6 @@ mod merkle_tree_hook {
 
         pub fn latest_checkpoint(&self) -> (Hash, u32) {
             (self.root(), self.count() - 1)
-        }
-
-        pub fn is_latest_dispatched(&self, id: Bytes32) -> bool {
-            let is_latest_dispatch = ScryptoVmV1Api::object_call(
-                self.mailbox.as_node_id(),
-                "is_latest_dispatched",
-                scrypto_args!(id),
-            );
-            scrypto_decode(&is_latest_dispatch)
-                .expect("MerkleTreeHook: failed to decode is_latest_dispatch from mailbox")
         }
 
         /// Post-dispatch accepts a vec of buckets; that is the payment that the user is willing to

@@ -1,0 +1,22 @@
+CALL_METHOD
+    Address("component_sim1cptxxxxxxxxxfaucetxxxxxxxxx000527798379xxxxxxxxxhkrefh")
+    "lock_fee"
+    Decimal("5000")
+;
+CALL_METHOD
+  Address("${account}")
+  "create_proof_of_amount"
+  Address("${igp_owner_badge}")
+  Decimal("1")
+;
+CALL_METHOD
+    Address("${igp}")
+    "set_destination_gas_configs"
+    Array<Tuple>(Tuple(1337u32, Tuple(Tuple(10000000000u128, 1u128), 1u128)))
+;
+CALL_METHOD
+    Address("${account}")
+    "try_deposit_batch_or_refund"
+    Expression("ENTIRE_WORKTOP")
+    Enum<0u8>()
+;

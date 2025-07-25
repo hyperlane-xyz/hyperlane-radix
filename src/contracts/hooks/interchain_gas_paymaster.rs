@@ -5,25 +5,25 @@ use crate::{
     types::{metadata::StandardHookMetadata, Bytes32, HyperlaneMessage},
 };
 #[derive(ScryptoSbor)]
-struct DestinationGasConfig {
-    gas_oracle: GasOracle,
-    gas_overhead: u128,
+pub struct DestinationGasConfig {
+    pub gas_oracle: GasOracle,
+    pub gas_overhead: u128,
 }
 
 #[derive(ScryptoSbor)]
-struct GasOracle {
-    token_exchange_rate: u128,
-    gas_price: u128,
+pub struct GasOracle {
+    pub token_exchange_rate: u128,
+    pub gas_price: u128,
 }
 
 #[derive(ScryptoSbor, ScryptoEvent)]
 struct GasPayment {
-    message_id: Bytes32,
-    destination_domain: u32,
-    // TODO: I believe decimal is an incorrect use here, we should instead use I192
-    gas_amount: Decimal,
-    payment: Decimal, // amount in XRD
-                      // TODO: resource address
+    pub message_id: Bytes32,
+    pub destination_domain: u32,
+    pub gas_amount: Decimal,
+    pub payment: Decimal,
+    pub resource_address: ResourceAddress,
+    pub sequence: u32,
 }
 
 #[blueprint]
@@ -32,57 +32,90 @@ mod interchain_gas_paymaster {
 
     // TODO: maybe model this with decimals
     const EXCHANGE_RATE_SCALE: u64 = 10_000_000_000u64; // 1e10
-    const DEFAULT_GAS: usize = 1usize; // TODO: change
+    const DEFAULT_GAS: usize = 1usize;
+
+    enable_method_auth! {
+        // decide which methods are public and which are restricted to the component's owner
+        methods {
+            // Public
+            hook_type => PUBLIC;
+            destination_gas_limit => PUBLIC;
+            quote_gas_payment => PUBLIC;
+            pay_for_gas => PUBLIC;
+            post_dispatch => PUBLIC;
+            quote_dispatch => PUBLIC;
+            sequence => PUBLIC;
+
+            // Owner only
+            set_destination_gas_configs => restrict_to: [OWNER];
+            claim => restrict_to: [OWNER];
+        }
+    }
 
     // TODO: configure public / owner methods like on the mailbox
     struct InterchainGasPaymaster {
         // map from domain -> gas config
-        destination_gas_configs: HashMap<u32, DestinationGasConfig>,
+        destination_gas_configs: KeyValueStore<u32, DestinationGasConfig>,
 
         // resource address that the user pays their gas in
         resource_address: ResourceAddress,
 
         // the vault holds the resources until they are claimed
         vault: FungibleVault,
+
+        // current event sequence. used for better indexing
+        sequence: u32,
     }
 
     impl InterchainGasPaymaster {
         pub fn instantiate(
             resource: ResourceAddress,
         ) -> (Global<InterchainGasPaymaster>, FungibleBucket) {
+            // reserve an address for the component
+            let (address_reservation, component_address) =
+                Runtime::allocate_component_address(InterchainGasPaymaster::blueprint_id());
+
             let owner_badge = ResourceBuilder::new_fungible(OwnerRole::None)
+                .metadata(metadata!(init {
+                    "name" => format!("Hyperlane InterchainGasPaymaster Owner Badge {}", Runtime::bech32_encode_address(component_address)), locked;
+                }))
                 .divisibility(DIVISIBILITY_NONE)
                 .mint_initial_supply(1);
 
-            let config = DestinationGasConfig {
-                gas_oracle: GasOracle {
-                    token_exchange_rate: EXCHANGE_RATE_SCALE.into(),
-                    gas_price: 1,
-                },
-                gas_overhead: 10,
-            };
             let component = Self {
-                destination_gas_configs: HashMap::from_iter([(1337u32, config)]), // TODO: remove after testing
+                destination_gas_configs: KeyValueStore::new(),
                 resource_address: resource,
                 vault: FungibleVault::new(resource),
+                sequence: 0u32,
             }
             .instantiate()
             .prepare_to_globalize(OwnerRole::Fixed(rule!(require(
                 owner_badge.resource_address()
             ))))
+            .with_address(address_reservation)
             .globalize();
 
             (component, owner_badge)
         }
 
-        pub fn hook_type() -> Types {
+        pub fn hook_type(&self) -> Types {
             Types::INTERCHAINGASPAYMASTER
         }
 
-        fn get_config(&self, destination: u32) -> &DestinationGasConfig {
+        pub fn sequence(&self) -> u32 {
+            self.sequence
+        }
+
+        fn get_config(&self, destination: u32) -> KeyValueEntryRef<DestinationGasConfig> {
             self.destination_gas_configs
                 .get(&destination)
                 .expect("IGP: no config for destination")
+        }
+
+        pub fn set_destination_gas_configs(&mut self, configs: Vec<(u32, DestinationGasConfig)>) {
+            for (domain, config) in configs {
+                self.destination_gas_configs.insert(domain, config)
+            }
         }
 
         // TODO: I believe decimal is an incorrect use here, we should instead use I192
@@ -105,6 +138,10 @@ mod interchain_gas_paymaster {
                 .expect("IGP: decimal overflow when performing gas price calculation")
         }
 
+        pub fn claim(&mut self) -> FungibleBucket {
+            self.vault.take_all()
+        }
+
         pub fn pay_for_gas(
             &mut self,
             message_id: Bytes32,
@@ -119,8 +156,6 @@ mod interchain_gas_paymaster {
                     required_payment
                 )
             }
-            // TODO: we might not have to do the above assertion
-            // TODO: check if this is actually just taking the required payment and returns whatever is left
             let mut payment = payment;
             self.vault.put(payment.take(required_payment));
 
@@ -129,7 +164,11 @@ mod interchain_gas_paymaster {
                 gas_amount: gas_limit,
                 message_id,
                 payment: required_payment,
+                sequence: self.sequence,
+                resource_address: self.resource_address,
             });
+
+            self.sequence += 1;
 
             // return whats left of the payment
             payment
