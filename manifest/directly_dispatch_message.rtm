@@ -1,0 +1,33 @@
+CALL_METHOD
+    Address("component_sim1cptxxxxxxxxxfaucetxxxxxxxxx000527798379xxxxxxxxxhkrefh")
+    "lock_fee"
+    Decimal("5000")
+;
+CALL_METHOD
+    Address("${account}")
+    "withdraw"
+    Address("${xrd}")
+    Decimal("11")
+;
+TAKE_FROM_WORKTOP
+    Address("${xrd}")
+    Decimal("11")
+    Bucket("bucket1") # the bucket name that we put the xrd into
+;
+CALL_METHOD
+    Address("${mailbox}")
+    "dispatch"
+    1337u32
+    Bytes("0000000000000000000000000000000000000000000000000000000000000000")
+    Bytes("")
+    None
+    None
+    Array<Bucket>(Bucket("bucket1"))
+    Address("${account}")
+;
+CALL_METHOD
+    Address("${account}")
+    "try_deposit_batch_or_refund"
+    Expression("ENTIRE_WORKTOP")
+    Enum<0u8>()
+;

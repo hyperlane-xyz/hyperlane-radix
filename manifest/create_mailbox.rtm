@@ -6,7 +6,7 @@ CALL_METHOD
 CALL_FUNCTION
     Address("${package}")
     "Mailbox"
-    "mailbox_instantiate"
+    "instantiate"
     75898670u32
 ;
 CALL_METHOD

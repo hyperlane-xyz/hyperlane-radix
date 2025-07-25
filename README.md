@@ -47,7 +47,6 @@ scrypto test -- --nocapture
 
 ## TODOS
 
-- `k256` should be checked or changed to an audited version
 - Trait problem, a component like hooks should always have a given interface
 - IGP:
   - IGP set destination gas config methods
@@ -55,9 +54,6 @@ scrypto test -- --nocapture
   - move from Decimals to I192
 - MerkleTreeHook:
   - Double check the merkle tree implementation
-- Mailbox:
-  - similar issue to the MerkleTreeHook have to figure out caller
-    - proposed solution: Mailbox issues badges to apps and checks validity
 
 - Check on Finality (How do the Shards work) -> Consensus engine
 - have a dedicated metadata function for involved addresses which the relayer calls first

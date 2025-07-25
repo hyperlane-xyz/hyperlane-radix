@@ -62,7 +62,7 @@ mod mailbox {
 
     impl Mailbox {
         /// Instantiates a new Mailbox component with the given local domain.
-        pub fn mailbox_instantiate(local_domain: u32) -> (Global<Mailbox>, FungibleBucket) {
+        pub fn instantiate(local_domain: u32) -> (Global<Mailbox>, FungibleBucket) {
             // reserve an address for the component
             let (address_reservation, component_address) =
                 Runtime::allocate_component_address(Mailbox::blueprint_id());
@@ -148,11 +148,17 @@ mod mailbox {
             hook: Option<ComponentAddress>,
             hook_metadata: Option<StandardHookMetadata>,
             payment: Vec<FungibleBucket>,
+            claimed_account_address: Global<AnyComponent>,
         ) -> (Bytes32, Vec<FungibleBucket>) {
+            // Important!: Assert that the claimed caller address is indeed the caller of the dispatch function.
+            Runtime::assert_access_rule(rule!(require(global_caller(
+                claimed_account_address.address()
+            ))));
+
             let hyperlane_message = HyperlaneMessage::new(
                 self.nonce,
                 self.local_domain,
-                Bytes32::zero(), // TODO: sender address, this seems to be more tricky than anticipated
+                claimed_account_address.address().into(),
                 destination_domain,
                 recipient_address,
                 message_body,
@@ -202,7 +208,7 @@ mod mailbox {
 
         /// Quote dispatch returns a map from resources and their amount that is required in decimals
         /// this ensure that we are not limited to a single payment resource and instead can model multiple resources
-        /// that might be needed in order to perfrom a remote transfer
+        /// that might be needed in order to perform a remote transfer
         pub fn quote_dispatch(
             &self,
             destination_domain: u32,
@@ -210,11 +216,17 @@ mod mailbox {
             message_body: Vec<u8>,
             hook: Option<ComponentAddress>,
             hook_metadata: Option<StandardHookMetadata>,
+            claimed_account_address: Global<AnyComponent>,
         ) -> IndexMap<ResourceAddress, Decimal> {
+            // Important!: Assert that the claimed caller address is indeed the caller of the dispatch function.
+            Runtime::assert_access_rule(rule!(require(global_caller(
+                claimed_account_address.address()
+            ))));
+
             let hyperlane_message = HyperlaneMessage::new(
                 self.nonce,
                 self.local_domain,
-                Bytes32::zero(), // TODO: sender address, this seems to be more tricky than anticipated
+                claimed_account_address.address().into(),
                 destination_domain,
                 recipient_address,
                 message_body,
@@ -223,7 +235,6 @@ mod mailbox {
             let mut quote = IndexMap::new();
             let default_hook = hook.or(self.default_hook);
             if let Some(default_hook) = default_hook {
-                // TODO: maybe we can use Global::<T> for this, not sure tho
                 let result = ScryptoVmV1Api::object_call(
                     default_hook.as_node_id(),
                     "quote_dispatch",
@@ -233,7 +244,6 @@ mod mailbox {
                 quote = scrypto_decode(&result).expect("Failed to decode post_dispatch result");
             }
             if let Some(required_hook) = self.required_hook {
-                // TODO: maybe we can use Global<T> for this, not sure tho
                 let result = ScryptoVmV1Api::object_call(
                     required_hook.as_node_id(),
                     "quote_dispatch",
