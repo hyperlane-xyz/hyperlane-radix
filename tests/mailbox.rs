@@ -74,7 +74,7 @@ pub fn dispatch_message(
         manifest,
         vec![NonFungibleGlobalId::from_public_key(
             &suite.account.public_key,
-        ), ],
+        )],
     );
 
     receipt
@@ -119,7 +119,7 @@ fn test_process_message_invalid_domain() {
     let (receipt, mailbox_address, _) = create_mailbox(&mut suite, 1337);
     receipt.expect_commit_success();
 
-    let metadata:Vec<u8> = vec![];
+    let metadata: Vec<u8> = vec![];
     let message: Vec<u8> = HyperlaneMessage {
         version: 3,
         nonce: 0,
@@ -128,12 +128,18 @@ fn test_process_message_invalid_domain() {
         destination: 1, // does not match mailbox domain
         recipient: Bytes32::zero(),
         body: vec![],
-    }.into();
+    }
+    .into();
 
     let visible_components: Vec<ComponentAddress> = vec![];
-    let receipt = suite.call_method(mailbox_address.unwrap(), "process", manifest_args!(metadata, message, visible_components));
+    let receipt = suite.call_method(
+        mailbox_address.unwrap(),
+        "process",
+        manifest_args!(metadata, message, visible_components),
+    );
 
-    assert!(format!("{:?}", receipt.expect_failure()).contains("Message destination domain does not match local domain"))
+    assert!(format!("{:?}", receipt.expect_failure())
+        .contains("Message destination domain does not match local domain"))
 }
 
 #[test]
@@ -142,19 +148,24 @@ fn test_process_message_invalid_version() {
     let (receipt, mailbox_address, _) = create_mailbox(&mut suite, 1337);
     receipt.expect_commit_success();
 
-    let metadata:Vec<u8> = vec![];
+    let metadata: Vec<u8> = vec![];
     let message: Vec<u8> = HyperlaneMessage {
-        version: 4,// does not match mailbox version
+        version: 4, // does not match mailbox version
         nonce: 0,
         origin: 1,
         sender: Bytes32::zero(),
         destination: 1337,
         recipient: Bytes32::zero(),
         body: vec![],
-    }.into();
+    }
+    .into();
 
     let visible_components: Vec<ComponentAddress> = vec![];
-    let receipt = suite.call_method(mailbox_address.unwrap(), "process", manifest_args!(metadata, message, visible_components));
+    let receipt = suite.call_method(
+        mailbox_address.unwrap(),
+        "process",
+        manifest_args!(metadata, message, visible_components),
+    );
 
     assert!(format!("{:?}", receipt.expect_failure()).contains("Unsupported message version"))
 }
@@ -165,7 +176,7 @@ fn test_process_message_recipient_no_app() {
     let (receipt, mailbox_address, _) = create_mailbox(&mut suite, 1337);
     receipt.expect_commit_success();
 
-    let metadata:Vec<u8> = vec![];
+    let metadata: Vec<u8> = vec![];
     let message: Vec<u8> = HyperlaneMessage {
         version: 3,
         nonce: 0,
@@ -174,10 +185,15 @@ fn test_process_message_recipient_no_app() {
         destination: 1337,
         recipient: suite.dummy_accounts[0].address.into(),
         body: vec![],
-    }.into();
+    }
+    .into();
 
     let visible_components: Vec<ComponentAddress> = vec![suite.dummy_accounts[0].address.into()];
-    let receipt = suite.call_method(mailbox_address.unwrap(), "process", manifest_args!(metadata, message, visible_components));
+    let receipt = suite.call_method(
+        mailbox_address.unwrap(),
+        "process",
+        manifest_args!(metadata, message, visible_components),
+    );
 
     assert!(format!("{:?}", receipt.expect_failure()).contains("SystemModuleError"))
 }
