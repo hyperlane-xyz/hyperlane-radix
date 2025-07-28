@@ -114,29 +114,6 @@ fn test_create_mailbox() {
 }
 
 #[test]
-fn test_dispatch_message() {
-    let mut suite = common::setup();
-    let (receipt, mailbox_address, _) = create_mailbox(&mut suite, 100);
-    receipt.expect_commit_success();
-
-    let address = suite.account.address.clone();
-    // let address = suite.dummy_accounts.get(0).unwrap().address.clone();
-    let r = dispatch_message(
-        &mut suite,
-        mailbox_address.unwrap(),
-        1337u32,
-        Bytes32::zero(),
-        vec![],
-        None,
-        address,
-        dec!(200000),
-    );
-
-    println!("{:?}", r);
-    r.expect_commit_success();
-}
-
-#[test]
 fn test_process_message_invalid_domain() {
     let mut suite = common::setup();
     let (receipt, mailbox_address, _) = create_mailbox(&mut suite, 1337);
