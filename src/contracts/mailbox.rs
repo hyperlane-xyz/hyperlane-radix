@@ -1,6 +1,6 @@
 use crate::types::metadata::StandardHookMetadata;
 use crate::types::Bytes32;
-use crate::types::{HyperlaneMessage, MESSAGE_VERSION};
+use crate::types::{HyperlaneMessage, MessageSender, MESSAGE_VERSION};
 use scrypto::blueprint;
 use scrypto::prelude::*;
 
@@ -148,17 +148,15 @@ mod mailbox {
             hook: Option<ComponentAddress>,
             hook_metadata: Option<StandardHookMetadata>,
             payment: Vec<FungibleBucket>,
-            claimed_account_address: Global<AnyComponent>,
+            claimed_account_address: MessageSender,
         ) -> (Bytes32, Vec<FungibleBucket>) {
             // Important!: Assert that the claimed caller address is indeed the caller of the dispatch function.
-            Runtime::assert_access_rule(rule!(require(global_caller(
-                claimed_account_address.address()
-            ))));
+            let verified_sender = self.verify_message_sender(claimed_account_address);
 
             let hyperlane_message = HyperlaneMessage::new(
                 self.nonce,
                 self.local_domain,
-                claimed_account_address.address().into(),
+                verified_sender.into(),
                 destination_domain,
                 recipient_address,
                 message_body,
@@ -216,17 +214,15 @@ mod mailbox {
             message_body: Vec<u8>,
             hook: Option<ComponentAddress>,
             hook_metadata: Option<StandardHookMetadata>,
-            claimed_account_address: Global<AnyComponent>,
+            claimed_account_address: MessageSender,
         ) -> IndexMap<ResourceAddress, Decimal> {
             // Important!: Assert that the claimed caller address is indeed the caller of the dispatch function.
-            Runtime::assert_access_rule(rule!(require(global_caller(
-                claimed_account_address.address()
-            ))));
+            let verified_sender = self.verify_message_sender(claimed_account_address);
 
             let hyperlane_message = HyperlaneMessage::new(
                 self.nonce,
                 self.local_domain,
-                claimed_account_address.address().into(),
+                verified_sender.into(),
                 destination_domain,
                 recipient_address,
                 message_body,
@@ -261,6 +257,26 @@ mod mailbox {
                 }
             }
             quote
+        }
+
+        fn verify_message_sender(&self, claimed_sender: MessageSender) -> ComponentAddress {
+            let verified_sender: ComponentAddress = match claimed_sender {
+                MessageSender::Component(component) => {
+                    // Important!: Assert that the claimed caller address is indeed the caller of the dispatch function.
+                    Runtime::assert_access_rule(rule!(require(global_caller(component.address()))));
+                    component.address()
+                }
+                MessageSender::Account(account) => {
+                    // Important!: Assert that the claimed (account) caller address is indeed the caller of the dispatch function.
+                    let OwnerRoleEntry { rule, .. } = account.get_owner_role();
+
+                    Runtime::assert_access_rule(rule);
+
+                    account.address()
+                }
+            };
+
+            verified_sender
         }
 
         pub fn process(

@@ -23,7 +23,7 @@ CALL_METHOD
     None
     None
     Array<Bucket>(Bucket("bucket1"))
-    Address("${account}")
+    Enum<1u8>(Address("${account}"))
 ;
 CALL_METHOD
     Address("${account}")

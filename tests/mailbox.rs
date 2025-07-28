@@ -64,7 +64,15 @@ pub fn dispatch_message(
                 hook,
                 Some((gas_limit, None::<Vec<u8>>)),
                 vec![lookup.bucket("payment")],
-                suite.account.address
+                // MessageSender::Account(Global::from(suite.account.address)),
+                ManifestValue::enum_variant(
+                    1u8,
+                    vec![ManifestValue::Custom {
+                        value: ManifestCustomValue::Address(ManifestAddress::Static(
+                            *claimed_account_address.as_node_id()
+                        )),
+                    }]
+                )
             )
         })
         .deposit_batch(suite.account.address, ManifestExpression::EntireWorktop)
@@ -196,4 +204,51 @@ fn test_process_message_recipient_no_app() {
     );
 
     assert!(format!("{:?}", receipt.expect_failure()).contains("SystemModuleError"))
+}
+
+#[test]
+fn test_dispatch_message() {
+    let mut suite = common::setup();
+    let (receipt, mailbox_address, _) = create_mailbox(&mut suite, 100);
+    receipt.expect_commit_success();
+
+    let address = suite.account.address.clone();
+    let r = dispatch_message(
+        &mut suite,
+        mailbox_address.unwrap(),
+        1337u32,
+        Bytes32::zero(),
+        vec![],
+        None,
+        address,
+        dec!(200000),
+    );
+
+    r.expect_commit_success();
+}
+
+#[test]
+fn test_dispatch_message_invalid_claimed_sender() {
+    let mut suite = common::setup();
+    let (receipt, mailbox_address, _) = create_mailbox(&mut suite, 100);
+    receipt.expect_commit_success();
+
+    // Choose an invalid dummy account as sender here
+    let address = suite.dummy_accounts[0].address.clone();
+    let r = dispatch_message(
+        &mut suite,
+        mailbox_address.unwrap(),
+        1337u32,
+        Bytes32::zero(),
+        vec![],
+        None,
+        address,
+        dec!(200000),
+    );
+
+    let outcome = &r.expect_commit_failure().outcome;
+    assert_eq!(
+        format!("{outcome:?}"),
+        "Failure(SystemError(AssertAccessRuleFailed))"
+    );
 }

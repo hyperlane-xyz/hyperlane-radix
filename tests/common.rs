@@ -7,6 +7,7 @@ pub struct SuiteAccount {
     pub address: ComponentAddress,
 }
 
+#[allow(dead_code)]
 pub struct Suite {
     pub ledger: LedgerSimulator<NoExtension, InMemorySubstateDatabase>,
     pub account: SuiteAccount,
@@ -14,6 +15,7 @@ pub struct Suite {
     pub package_address: PackageAddress,
 }
 
+#[allow(dead_code)]
 pub fn setup() -> Suite {
     let mut ledger = LedgerSimulatorBuilder::new().build();
     let (public_key, _private_key, account_address) = ledger.new_allocated_account();
@@ -43,6 +45,7 @@ pub fn setup() -> Suite {
 }
 
 impl Suite {
+    #[allow(dead_code)]
     pub fn call_method(
         &mut self,
         component_address: ComponentAddress,
@@ -64,6 +67,7 @@ impl Suite {
         receipt
     }
 
+    #[allow(dead_code)]
     pub fn call_method_success<T: ScryptoDecode>(
         &mut self,
         component_address: ComponentAddress,

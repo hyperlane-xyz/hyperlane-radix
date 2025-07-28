@@ -1,6 +1,8 @@
 use crate::{
     types::Bytes32,
-    types::{metadata::StandardHookMetadata, warp_payload::WarpPayload, HyperlaneMessage},
+    types::{
+        metadata::StandardHookMetadata, warp_payload::WarpPayload, HyperlaneMessage, MessageSender,
+    },
 };
 use scrypto::prelude::*;
 
@@ -262,7 +264,7 @@ mod hyp_token {
                     custom_hook,
                     standard_hook_metadata,
                     hyp_fee_payment,
-                    Runtime::global_component()
+                    MessageSender::Component(Runtime::global_component())
                 ),
             );
 
@@ -301,7 +303,7 @@ mod hyp_token {
                     payload,
                     None::<ComponentAddress>,
                     Some(standard_hook_metadata),
-                    Runtime::global_component()
+                    MessageSender::Component(Runtime::global_component())
                 ),
             );
 

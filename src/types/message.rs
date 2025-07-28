@@ -3,6 +3,12 @@ use scrypto::prelude::*;
 
 use crate::types::eth::{domain_hash, eth_hash};
 
+#[derive(ScryptoSbor)]
+pub enum MessageSender {
+    Component(Global<AnyComponent>),
+    Account(Global<Account>),
+}
+
 pub const MESSAGE_VERSION: u8 = 3;
 
 /// A Stamped message that has been committed at some nonce
