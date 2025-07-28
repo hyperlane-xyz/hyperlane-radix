@@ -24,7 +24,7 @@ mod routing_ism {
 
     impl RoutingIsm {
         pub fn instantiate(
-            inital_routes: Vec<(u32, ComponentAddress)>,
+            initial_routes: Vec<(u32, ComponentAddress)>,
         ) -> (Global<RoutingIsm>, FungibleBucket) {
             // reserve an address for the component
             let (address_reservation, component_address) =
@@ -42,7 +42,7 @@ mod routing_ism {
                 .mint_initial_supply(1);
 
             let routes: KeyValueStore<u32, ComponentAddress> = KeyValueStore::new();
-            for (domain, ism) in inital_routes {
+            for (domain, ism) in initial_routes {
                 routes.insert(domain, ism);
             }
 
