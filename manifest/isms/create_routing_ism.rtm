@@ -7,8 +7,7 @@ CALL_FUNCTION
     Address("${package}")
     "RoutingIsm"
     "instantiate"
-    Array<U32>(1337u32)
-    Array<Address>(Address("component_sim1cqt3xdmhn2289f65jeaj8th4qx0fy82lgdj0t9f8my49waykm9rzs9"))
+    Array<Tuple>(Tuple(1337u32,Address("component_sim1cq24tssn2tqkzrsf8vk5r4ckp2jty66k6hd20smudu0ycr7p7ayzen")))
 ;
 CALL_METHOD
     Address("${account}")
