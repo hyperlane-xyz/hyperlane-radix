@@ -55,7 +55,6 @@ pub fn dispatch_message(
         .lock_fee_from_faucet()
         .withdraw_from_account(suite.account.address, XRD, dec!(20))
         .take_from_worktop(XRD, dec!(1), "payment")
-        // .call_method(suite.account.address, ACCOUNT_SECURIFY_IDENT, AccountSecurifyInput {})
         .call_method_with_name_lookup(component_address, "dispatch", |lookup| {
             manifest_args!(
                 destination,
@@ -64,7 +63,6 @@ pub fn dispatch_message(
                 hook,
                 Some((gas_limit, None::<Vec<u8>>)),
                 vec![lookup.bucket("payment")],
-                // MessageSender::Account(Global::from(suite.account.address)),
                 ManifestValue::enum_variant(
                     1u8,
                     vec![ManifestValue::Custom {
