@@ -26,7 +26,9 @@ mod merkle_tree_hook {
             hook_type => PUBLIC;
             count => PUBLIC;
             root => PUBLIC;
+            tree => PUBLIC;
             latest_checkpoint => PUBLIC;
+            local_domain => PUBLIC;
             quote_dispatch => PUBLIC;
             // Mailbox Only
             post_dispatch => restrict_to: [mailbox_component];
@@ -66,12 +68,26 @@ mod merkle_tree_hook {
             self.merkle_tree.count() as u32 // TODO: enforce size limit
         }
 
+        pub fn tree(&self) -> MerkleTree {
+            self.merkle_tree.clone()
+        }
+
         pub fn root(&self) -> Hash {
             self.merkle_tree.root()
         }
 
         pub fn latest_checkpoint(&self) -> (Hash, u32) {
             (self.root(), self.count() - 1)
+        }
+
+        pub fn local_domain(&self) -> u32 {
+            let result = ScryptoVmV1Api::object_call(
+                self.mailbox.as_node_id(),
+                "local_domain",
+                scrypto_args!(),
+            );
+
+            scrypto_decode(&result).expect("Failed to decode domain result")
         }
 
         /// Post-dispatch accepts a vec of buckets; that is the payment that the user is willing to

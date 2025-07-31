@@ -1,0 +1,18 @@
+CALL_METHOD
+    Address("component_sim1cptxxxxxxxxxfaucetxxxxxxxxx000527798379xxxxxxxxxhkrefh")
+    "lock_fee"
+    Decimal("5000")
+;
+CALL_METHOD
+    Address("${validator_announce}")
+    "announce"
+    Bytes("f39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
+    "s3://hyperlane-testnet4-nobletestnet-validator-0/us-east-1"
+    Bytes("9fa47ae26eacf718e352d7245110e35f25fc6e04575913873b4490656dc6c19d3568a8b40939ebbf6df1865db5a3152202efcc1075a05c0250d9b4f4c832fccb1b")
+;
+CALL_METHOD
+    Address("${account}")
+    "try_deposit_batch_or_refund"
+    Expression("ENTIRE_WORKTOP")
+    Enum<0u8>()
+;

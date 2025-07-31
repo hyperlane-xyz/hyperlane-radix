@@ -1,12 +1,14 @@
 use crate::types::{announcement_digest, hash_concat, recover_eth_address, EthAddress};
 use scrypto::prelude::*;
+use std::ops::Deref;
 
 #[blueprint]
 mod validator_announce {
 
     struct ValidatorAnnounce {
-        storage_locations: HashMap<EthAddress, Vec<String>>,
-        announcements: HashSet<Hash>,
+        storage_locations: KeyValueStore<EthAddress, Vec<String>>,
+        announcements: KeyValueStore<Hash, ()>,
+        validators: Vec<EthAddress>, // TODO: remove
         mailbox: ComponentAddress,
         local_domain: u32,
     }
@@ -20,8 +22,9 @@ mod validator_announce {
                 .expect("ValidatorAnnounce: failed to decode local_domain from mailbox");
 
             Self {
-                storage_locations: HashMap::new(),
-                announcements: HashSet::new(),
+                storage_locations: KeyValueStore::new(),
+                announcements: KeyValueStore::new(),
+                validators: Vec::new(),
                 mailbox,
                 local_domain,
             }
@@ -36,13 +39,17 @@ mod validator_announce {
         ) -> Vec<Vec<String>> {
             validators
                 .iter()
-                .filter_map(|validator| self.storage_locations.get(validator))
-                .cloned()
+                .map(|validator| {
+                    self.storage_locations
+                        .get(validator)
+                        .cloned()
+                        .unwrap_or_default() // return an empty list if the validator is not present
+                })
                 .collect()
         }
 
         pub fn get_announced_validators(&self) -> Vec<EthAddress> {
-            self.storage_locations.keys().into_iter().cloned().collect()
+            self.validators.clone()
         }
 
         pub fn announce(
@@ -52,27 +59,40 @@ mod validator_announce {
             signature: Vec<u8>,
         ) -> bool {
             let announcement_id = hash_concat(address, &storage_location);
-            let replayed = self.announcements.insert(announcement_id);
+            let replayed = self.announcements.get(&announcement_id);
 
-            if replayed {
+            if replayed.is_some() {
                 panic!("ValidatorAnnounce: cannot announce same storage locations twice")
             }
 
+            self.announcements.insert(announcement_id, ());
+
             let announcement_digest =
                 announcement_digest(&storage_location, self.local_domain, self.mailbox.into());
+            info!("{:?}", announcement_digest);
+
             let signature = Secp256k1Signature::try_from(signature.as_slice())
                 .expect("ValidatorAnnounce: failed to parse signature");
 
             let signer = recover_eth_address(&announcement_digest, &signature);
-
+            info!("{:?}", signer);
             if signer != address {
                 panic!("ValidatorAnnounce: signer does not match passed address")
             }
 
-            self.storage_locations
-                .entry(address)
-                .or_insert_with(Vec::new)
-                .push(storage_location);
+            // we could reference the already inserted locations if present, instead of cloning them
+            // but we expect this not to be expensive either way
+            let mut locations = self
+                .storage_locations
+                .get(&address)
+                .map(|x| x.deref().clone())
+                .unwrap_or_default();
+
+            locations.push(storage_location);
+
+            self.storage_locations.insert(address, locations);
+            self.validators.push(address);
+
             true
         }
     }

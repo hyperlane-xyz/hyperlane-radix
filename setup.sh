@@ -27,7 +27,7 @@ echo "\nConfiguring IGP"
 output_igp=$(resim run manifest/igp/create_igp.rtm)
 export igp=$(echo "$output_igp" | grep -A 1 "New Entities:" | grep "Component:" | awk '{print $3}')
 export igp_owner_badge=$(echo "$output_igp" | grep -A 2 "New Entities:" | grep "Resource:" | awk '{print $3}')
-resim run manifest/igp/set_destination_gas_config.rtm
+resim run manifest/igp/set_destination_gas_config.rtm > /dev/null
 
 
 echo "\nConfiguring Mailbox"
@@ -36,14 +36,16 @@ export mailbox=$(echo "$output_mailbox" | grep -A 1 "New Entities:" | grep "Comp
 export mailbox_owner_badge=$(echo "$output_mailbox" | grep -A 2 "New Entities:" | grep "Resource:" | awk '{print $3}')
 export merkle_tree_hook=`resim run manifest/create_merkle_tree_hook.rtm | grep -A 1 "New Entities:" | grep "Component:" | awk '{print $3}'`
 export ism=`resim run manifest/create_ism.rtm | grep -A 1 "New Entities:" | grep "Component:" | awk '{print $3}'`
+export validator_announce=`resim run manifest/validator_announce/create_validator_announce.rtm | grep -A 1 "New Entities:" | grep "Component:" | awk '{print $3}'`
 
-resim call-method $mailbox set_required_hook $merkle_tree_hook --proofs $mailbox_owner_badge:1
-resim call-method $mailbox set_default_hook $igp --proofs $mailbox_owner_badge:1
-resim call-method $mailbox set_default_ism $ism --proofs $mailbox_owner_badge:1
+resim call-method $mailbox set_required_hook $merkle_tree_hook --proofs $mailbox_owner_badge:1 > /dev/null
+resim call-method $mailbox set_default_hook $igp --proofs $mailbox_owner_badge:1 > /dev/null
+resim call-method $mailbox set_default_ism $ism --proofs $mailbox_owner_badge:1 > /dev/null
 echo "mailbox = $mailbox"
 echo "merkle_tree_hook = $merkle_tree_hook"
 echo "igp = $igp"
 echo "ism = $ism"
+echo "validator_announce = $validator_announce"
 
 echo "\nSetup Warp Routes"
 export noop_ism=`resim run manifest/warp/create_noop_ism.rtm | grep -A 1 "New Entities:" | grep "Component:" | awk '{print $3}'`
@@ -53,7 +55,7 @@ output_collateral=$(resim run manifest/warp/collateral/create_warp_collateral.rt
 export hyp_collateral=$(echo "$output_collateral" | grep -A 1 "New Entities:" | grep "Component:" | awk '{print $3}')
 export hyp_collateral_owner_badge=$(echo "$output_collateral" | grep -A 2 "New Entities:" | grep "Resource:" | awk '{print $3}')
 resim run manifest/warp/collateral/enroll_remote_router.rtm > /dev/null
-resim run manifest/warp/collateral/set_noop_ism.rtm
+resim run manifest/warp/collateral/set_noop_ism.rtm > /dev/null
 
 echo "hyp_collateral = $hyp_collateral"
 echo "hyp_collateral_owner = $hyp_collateral_owner_badge"
@@ -63,7 +65,7 @@ export hyp_synthetic=$(echo "$output_synthetic" | grep -A 1 "New Entities:" | gr
 export hyp_synthetic_owner_badge=$(echo "$output_synthetic" | grep -A 2 "New Entities:" | grep "Resource:" | awk '{print $3}')
 export hyp_synthetic_token=$(echo "$output_synthetic" | grep -A 3 "New Entities:" | grep "Resource:" | sed -n '2p' | awk '{print $3}')
 resim run manifest/warp/synthetic/enroll_remote_router.rtm > /dev/null
-resim run manifest/warp/synthetic/set_noop_ism.rtm
+resim run manifest/warp/synthetic/set_noop_ism.rtm > /dev/null
 
 echo ""
 echo "hyp_synthetic = $hyp_synthetic"

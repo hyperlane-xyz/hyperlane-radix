@@ -160,7 +160,7 @@ pub fn merkle_root_from_branch(
     current
 }
 
-#[derive(ScryptoSbor, ScryptoEvent)]
+#[derive(ScryptoSbor, ScryptoEvent, Clone)]
 pub struct MerkleTree {
     branch: [Hash; TREE_DEPTH],
     count: usize,

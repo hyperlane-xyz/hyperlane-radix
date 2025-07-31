@@ -25,6 +25,7 @@ CALL_METHOD
     Enum<0u8>()
     Enum<0u8>()
     Array<Bucket>(Bucket("bucket1")) # passing the bucket into the dispatch method as the payment
+    Enum<1u8>(Address("${account}"))
 ;
 CALL_METHOD
     Address("${account}")

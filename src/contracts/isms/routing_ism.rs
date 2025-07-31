@@ -58,7 +58,7 @@ mod routing_ism {
         }
 
         pub fn module_type(&self) -> Types {
-            Types::ROUTING
+            Types::Routing
         }
 
         /// Routes a message to a underlying ISM
