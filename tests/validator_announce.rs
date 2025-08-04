@@ -150,8 +150,7 @@ fn test_announced_storage_locations() {
     let call_result = receipt.expect_commit_success().outcome.expect_success();
     call_result[1].expect_return_value(&true);
 
-    //
-
+    // Assert state after announcement
     let storage_locations: Vec<Vec<String>> = suite.call_method_success(
         validator_announce,
         "get_announced_storage_locations",
