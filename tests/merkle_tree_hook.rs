@@ -75,6 +75,10 @@ pub fn merkle_tree_post_dispatch(
     receipt
 }
 
+fn hex_str_to_bytes32(hex_string: &str) -> Bytes32 {
+    hex::decode(hex_string).unwrap().as_slice().into()
+}
+
 #[test]
 fn test_create_merkle_tree_hook() {
     let mut suite = common::setup();
@@ -94,7 +98,7 @@ fn test_empty_root() {
     let res = merkle_root(&mut suite, component_address);
     // Root of an empty merkle tree
     assert_eq!(
-        format!("{res:#?}"),
+        res.to_string(),
         "27ae5ba08d7291c96c8cbddcc148bf48a6d68c7974b94356f53754ef6171d757"
     );
 }
@@ -119,15 +123,9 @@ fn test_example() {
 
         // Craft dummy message
         let recipient: Bytes32 =
-            hex::decode("00000000000000000000000000000000000000000000000000000000deadbeef")
-                .unwrap()
-                .as_slice()
-                .into();
+            hex_str_to_bytes32("00000000000000000000000000000000000000000000000000000000deadbeef");
         let sender: Bytes32 =
-            hex::decode("0000000000000000000000007fa9385be102ac3eac297483dd6233d62b3e1496")
-                .unwrap()
-                .as_slice()
-                .into();
+            hex_str_to_bytes32("0000000000000000000000007fa9385be102ac3eac297483dd6233d62b3e1496");
         let message = HyperlaneMessage::new(0, 11, sender, 22, recipient, Vec::from(body));
 
         let receipt = merkle_tree_post_dispatch(&mut suite, component_address, message.clone());
@@ -137,7 +135,10 @@ fn test_example() {
         assert_eq!(format!("{:?}", result_hash), expected_hashes[i as usize]);
 
         let (checkpoint_root, checkpoint) = latest_checkpoint(&mut suite, component_address);
-        assert_eq!(format!("{:?}", checkpoint_root), expected_hashes[i as usize]);
+        assert_eq!(
+            format!("{:?}", checkpoint_root),
+            expected_hashes[i as usize]
+        );
         assert_eq!(checkpoint, i as u32);
     }
 }
