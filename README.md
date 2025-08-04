@@ -52,8 +52,6 @@ scrypto test -- --nocapture
   - IGP set destination gas config methods
   - Public / Protected Methods enforcen
   - move from Decimals to I192
-- MerkleTreeHook:
-  - Double check the merkle tree implementation
 
 - Check on Finality (How do the Shards work) -> Consensus engine
 - have a dedicated metadata function for involved addresses which the relayer calls first

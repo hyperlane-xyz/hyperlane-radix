@@ -15,5 +15,3 @@ CALL_METHOD
     Expression("ENTIRE_WORKTOP")
     Enum<0u8>()
 ;
-
-
