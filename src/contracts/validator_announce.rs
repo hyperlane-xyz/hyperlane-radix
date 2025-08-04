@@ -8,7 +8,6 @@ mod validator_announce {
     struct ValidatorAnnounce {
         storage_locations: KeyValueStore<EthAddress, Vec<String>>,
         announcements: KeyValueStore<Hash, ()>,
-        validators: Vec<EthAddress>, // TODO: remove
         mailbox: ComponentAddress,
         local_domain: u32,
     }
@@ -24,7 +23,6 @@ mod validator_announce {
             Self {
                 storage_locations: KeyValueStore::new(),
                 announcements: KeyValueStore::new(),
-                validators: Vec::new(),
                 mailbox,
                 local_domain,
             }
@@ -48,10 +46,6 @@ mod validator_announce {
                 .collect()
         }
 
-        pub fn get_announced_validators(&self) -> Vec<EthAddress> {
-            self.validators.clone()
-        }
-
         pub fn announce(
             &mut self,
             address: EthAddress,
@@ -69,13 +63,11 @@ mod validator_announce {
 
             let announcement_digest =
                 announcement_digest(&storage_location, self.local_domain, self.mailbox.into());
-            info!("{:?}", announcement_digest);
 
             let signature = Secp256k1Signature::try_from(signature.as_slice())
                 .expect("ValidatorAnnounce: failed to parse signature");
 
             let signer = recover_eth_address(&announcement_digest, &signature);
-            info!("{:?}", signer);
             if signer != address {
                 panic!("ValidatorAnnounce: signer does not match passed address")
             }
@@ -91,7 +83,6 @@ mod validator_announce {
             locations.push(storage_location);
 
             self.storage_locations.insert(address, locations);
-            self.validators.push(address);
 
             true
         }
