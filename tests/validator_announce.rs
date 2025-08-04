@@ -102,9 +102,8 @@ fn test_announce() {
     let storage_location = "s3://test-storage-location".to_string();
 
     let mut suite = common::setup();
-    let (receipt, _, _) = create_mailbox(&mut suite, 1337);
-    receipt.expect_commit_success();
-    let mailbox = receipt.expect_commit_success().new_component_addresses()[0];
+    let (_, mailbox, _) = create_mailbox(&mut suite, 1337);
+    let mailbox = mailbox.unwrap();
     let validator_announce = create_validator_announce(&mut suite, mailbox);
 
     // Act
@@ -132,9 +131,8 @@ fn test_announced_storage_locations() {
     let expected_storage_location = "s3://test-storage-location".to_string();
 
     let mut suite = common::setup();
-    let (receipt, _, _) = create_mailbox(&mut suite, 1337);
-    receipt.expect_commit_success();
-    let mailbox = receipt.expect_commit_success().new_component_addresses()[0];
+    let (_, mailbox, _) = create_mailbox(&mut suite, 1337);
+    let mailbox = mailbox.unwrap();
     let validator_announce = create_validator_announce(&mut suite, mailbox);
 
     // Act
