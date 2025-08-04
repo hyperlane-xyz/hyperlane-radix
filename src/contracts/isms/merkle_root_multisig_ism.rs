@@ -30,10 +30,10 @@ mod merkle_root_multisig_ism {
         }
 
         pub fn module_type(&self) -> Types {
-            Types::MESSAGEIDMULTISIG
+            Types::MerkleRootMultisig
         }
 
-        pub fn validators_and_threshold(&self) -> (Vec<EthAddress>, usize) {
+        pub fn validators_and_threshold(&self, _message: Vec<u8>) -> (Vec<EthAddress>, usize) {
             (self.validators.clone(), self.threshold)
         }
 

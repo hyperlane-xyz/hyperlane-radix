@@ -30,10 +30,10 @@ mod message_id_mutlsig_ism {
         }
 
         pub fn module_type(&self) -> Types {
-            Types::MESSAGEIDMULTISIG
+            Types::MessageIdMultisig
         }
 
-        pub fn validators_and_threshold(&self) -> (Vec<EthAddress>, usize) {
+        pub fn validators_and_threshold(&self, _message: Vec<u8>) -> (Vec<EthAddress>, usize) {
             (self.validators.clone(), self.threshold)
         }
 

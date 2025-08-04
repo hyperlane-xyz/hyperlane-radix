@@ -58,15 +58,22 @@ pub fn domain_hash(local_domain: u32, address: &[u8]) -> Hash {
     return keccak256_hash(bytes);
 }
 
+pub fn announcement_domain_hash(local_domain: u32, address: &[u8]) -> Hash {
+    let mut bytes = local_domain.to_be_bytes().to_vec();
+    bytes.extend(address);
+    bytes.extend("HYPERLANE_ANNOUNCEMENT".as_bytes());
+    return keccak256_hash(bytes);
+}
+
 pub fn announcement_digest(
     storage_location: &str,
     local_domain: u32,
     mailbox_address: Bytes32,
 ) -> Hash {
-    let mut domain_hash = domain_hash(local_domain, mailbox_address.as_ref()).to_vec();
+    let mut domain_hash = announcement_domain_hash(local_domain, mailbox_address.as_ref()).to_vec();
     domain_hash.extend(storage_location.as_bytes());
 
-    keccak256_hash(domain_hash)
+    eth_hash(keccak256_hash(domain_hash).as_ref())
 }
 
 /// recover the eth address from the signature of the given hash

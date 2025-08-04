@@ -15,7 +15,7 @@ mod noop_ism {
         }
 
         pub fn module_type(&self) -> Types {
-            Types::NULL
+            Types::Null
         }
 
         pub fn verify(&mut self, _metadata: Vec<u8>, _message: Vec<u8>) -> bool {
