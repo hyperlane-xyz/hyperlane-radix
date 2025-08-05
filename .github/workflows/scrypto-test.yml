@@ -1,4 +1,4 @@
-name: Scrypto Test
+name: scrypto-test.yml
 
 on:
   push:
