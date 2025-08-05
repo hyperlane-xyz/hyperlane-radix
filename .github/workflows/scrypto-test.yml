@@ -1,0 +1,23 @@
+name: Scrypto Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  scrypto-test:
+    runs-on: ubuntu-latest
+
+    container:
+      image: radixdlt/radix-clis:latest
+      options: --user root
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run scrypto test
+        run: |
+          scrypto test
