@@ -195,7 +195,8 @@ mod mailbox {
             });
 
             Runtime::emit_event(DispatchEvent {
-                destination: destination_domain,
+                destination:
+                destination_domain,
                 recipient: recipient_address,
                 sequence: hyperlane_message.nonce,
                 message: hyperlane_message.into(),
