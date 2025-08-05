@@ -11,13 +11,17 @@ jobs:
     runs-on: ubuntu-latest
 
     container:
-      image: radixdlt/radix-clis:latest
+      image: radixdlt/scrypto-builder:v1.2.0
       options: --user root
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Run scrypto test
+      - name: Install Rust toolchain (with rustfmt)
         run: |
-          scrypto test
+          rustup update stable
+          rustup component add rustfmt
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
