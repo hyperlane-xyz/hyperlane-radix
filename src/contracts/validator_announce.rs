@@ -1,4 +1,5 @@
 use crate::types::{announcement_digest, hash_concat, recover_eth_address, EthAddress};
+use crate::{format_error, panic_error};
 use scrypto::prelude::*;
 use std::ops::Deref;
 
@@ -18,7 +19,7 @@ mod validator_announce {
             let local_domain =
                 ScryptoVmV1Api::object_call(mailbox.as_node_id(), "local_domain", scrypto_args!());
             let local_domain: u32 = scrypto_decode(&local_domain)
-                .expect("ValidatorAnnounce: failed to decode local_domain from mailbox");
+                .expect(&format_error!("failed to decode local_domain from mailbox"));
 
             Self {
                 storage_locations: KeyValueStore::new(),
@@ -56,7 +57,7 @@ mod validator_announce {
             let replayed = self.announcements.get(&announcement_id);
 
             if replayed.is_some() {
-                panic!("ValidatorAnnounce: cannot announce same storage locations twice")
+                panic_error!("cannot announce same storage locations twice")
             }
 
             self.announcements.insert(announcement_id, ());
@@ -65,11 +66,11 @@ mod validator_announce {
                 announcement_digest(&storage_location, self.local_domain, self.mailbox.into());
 
             let signature = Secp256k1Signature::try_from(signature.as_slice())
-                .expect("ValidatorAnnounce: failed to parse signature");
+                .expect(&format_error!("failed to parse signature"));
 
             let signer = recover_eth_address(&announcement_digest, &signature);
             if signer != address {
-                panic!("ValidatorAnnounce: signer does not match passed address")
+                panic_error!("signer does not match passed address")
             }
 
             // we could reference the already inserted locations if present, instead of cloning them

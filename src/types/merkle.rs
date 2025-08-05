@@ -184,7 +184,7 @@ impl MerkleTree {
 
     pub fn insert(&mut self, leaf: Hash) {
         if self.count >= MAX_LEAFS {
-            panic!("merkle: can't insert any more leafs, tree full")
+            panic!("Merkle: can't insert any more leafs, tree full")
         }
 
         self.count += 1;
