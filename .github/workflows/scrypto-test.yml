@@ -18,10 +18,5 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Rust toolchain (with rustfmt)
-        run: |
-          rustup update stable
-          rustup component add rustfmt
-
-      - name: Check formatting
+      - name: Run all tests
         run: scrypto test
