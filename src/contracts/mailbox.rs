@@ -255,7 +255,11 @@ mod mailbox {
                 for (key, value) in required_hook_quote.iter() {
                     quote
                         .entry(*key)
-                        .and_modify(|existing| *existing += *value) // TODO: double check if this can result in overflow
+                        .and_modify(|existing: &mut Decimal| {
+                            *existing = existing
+                                .checked_add(*value)
+                                .expect(&format_error!("encountered overflow on quote_dispatch"))
+                        })
                         .or_insert(*value);
                 }
             }
