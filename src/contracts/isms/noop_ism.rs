@@ -1,7 +1,6 @@
 use crate::contracts::isms::types::Types;
 use scrypto::prelude::*;
 
-// TODO: make this implement the ism trait
 #[blueprint]
 mod noop_ism {
     struct NoopIsm {}

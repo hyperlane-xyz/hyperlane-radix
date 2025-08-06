@@ -14,9 +14,6 @@ pub const MESSAGE_VERSION: u8 = 3;
 /// A Stamped message that has been committed at some nonce
 pub type RawHyperlaneMessage = Vec<u8>;
 
-// TODO: open discussion whether or not we actually need Bytes32 - we can also just use Hash, but this might be confusing
-// we can also rename them, and i see there is an interal support for wrapping, might also be worth it
-
 #[derive(Clone, Eq, PartialEq, Hash, Sbor, ScryptoEvent, PartialOrd, Ord, Copy, Default, Debug)]
 #[sbor(transparent)]
 pub struct Bytes32([u8; 32]);
@@ -81,10 +78,8 @@ impl Into<ComponentAddress> for Bytes32 {
     fn into(self) -> ComponentAddress {
         // component addresses are 30 bytes long
         // remove the first 2 bytes
-        let mut address_bytes = [0u8; 30];
-        address_bytes.copy_from_slice(&self.0[2..32]);
-        // TODO: double check whether or not we want to enable checking here
-        // this will panic if the given address is not a valid global compoentn / address
+        let mut address_bytes = [0u8; NodeId::LENGTH];
+        address_bytes.copy_from_slice(&self.0[32 - NodeId::LENGTH..32]);
         ComponentAddress::new_or_panic(address_bytes)
     }
 }

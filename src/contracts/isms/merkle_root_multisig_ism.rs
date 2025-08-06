@@ -1,10 +1,10 @@
 use crate::contracts::isms::{multisig_ism::verify_multisig, types::Types};
+use crate::panic_error;
 use crate::types::merkle::merkle_root_from_branch;
 use crate::types::metadata::MultisigIsmMerkleRootMetadata;
 use crate::types::EthAddress;
 use crate::types::HyperlaneMessage;
 use scrypto::prelude::*;
-// TODO: make this implement the ism trait
 
 #[blueprint]
 mod merkle_root_multisig_ism {
@@ -19,7 +19,10 @@ mod merkle_root_multisig_ism {
             validators: Vec<EthAddress>,
             threshold: usize,
         ) -> Global<MerkleRootMultisigIsm> {
-            // TODO: assert correct threshold & uniqueness
+            if validators.len() < threshold {
+                panic_error!("threshold must be less than or equal to the number of validators");
+            }
+
             Self {
                 validators,
                 threshold,

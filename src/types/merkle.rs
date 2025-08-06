@@ -142,11 +142,7 @@ pub const ZERO_HASHES: [Hash; TREE_DEPTH] = [
 ];
 
 /// Compute a root hash from a leaf and a Merkle proof.
-pub fn merkle_root_from_branch(
-    leaf: Bytes32,
-    branch: &[Bytes32; TREE_DEPTH],
-    index: u32, // u32 is valid as the tree depth is 32 TODO: make this type depended
-) -> Hash {
+pub fn merkle_root_from_branch(leaf: Bytes32, branch: &[Bytes32; TREE_DEPTH], index: u32) -> Hash {
     let mut current = leaf.into();
 
     for (i, next) in branch.iter().enumerate() {
