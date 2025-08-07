@@ -42,6 +42,12 @@ impl From<Hash> for Bytes32 {
     }
 }
 
+impl From<Bytes32> for Hash {
+    fn from(value: Bytes32) -> Self {
+        Hash(value.0)
+    }
+}
+
 impl From<[u8; 32]> for Bytes32 {
     fn from(bytes: [u8; 32]) -> Self {
         Bytes32(bytes)
@@ -50,7 +56,7 @@ impl From<[u8; 32]> for Bytes32 {
 
 impl From<&[u8; 32]> for Bytes32 {
     fn from(bytes: &[u8; 32]) -> Self {
-        Bytes32(bytes.clone())
+        Bytes32(*bytes)
     }
 }
 
@@ -58,7 +64,7 @@ impl From<&[u8]> for Bytes32 {
     fn from(bytes: &[u8]) -> Self {
         let bytes: [u8; 32] = bytes.try_into().expect("Unable to parse bytes to bytes32");
 
-        Bytes32(bytes.clone())
+        Bytes32(bytes)
     }
 }
 
@@ -68,18 +74,12 @@ impl AsRef<[u8]> for Bytes32 {
     }
 }
 
-impl Into<Hash> for Bytes32 {
-    fn into(self) -> Hash {
-        Hash::from_bytes(self.0)
-    }
-}
-
-impl Into<ComponentAddress> for Bytes32 {
-    fn into(self) -> ComponentAddress {
+impl From<Bytes32> for ComponentAddress {
+    fn from(bytes: Bytes32) -> Self {
         // component addresses are 30 bytes long
         // remove the first 2 bytes
         let mut address_bytes = [0u8; NodeId::LENGTH];
-        address_bytes.copy_from_slice(&self.0[32 - NodeId::LENGTH..32]);
+        address_bytes.copy_from_slice(&bytes.0[32 - NodeId::LENGTH..32]);
         ComponentAddress::new_or_panic(address_bytes)
     }
 }
@@ -146,7 +146,7 @@ impl HyperlaneMessage {
         checkpoint_root: Bytes32,
         checkpoint_index: u32,
     ) -> Hash {
-        let mut digest = domain_hash(origin, &merkle_tree_hook.as_ref()).to_vec();
+        let mut digest = domain_hash(origin, merkle_tree_hook.as_ref()).to_vec();
         digest.extend(checkpoint_root.as_ref());
         digest.extend(checkpoint_index.to_be_bytes());
         digest.extend(message_id.as_ref());
@@ -197,9 +197,9 @@ impl From<&HyperlaneMessage> for RawHyperlaneMessage {
     }
 }
 
-impl Into<Vec<u8>> for HyperlaneMessage {
-    fn into(self) -> Vec<u8> {
-        RawHyperlaneMessage::from(&self)
+impl From<HyperlaneMessage> for Vec<u8> {
+    fn from(m: HyperlaneMessage) -> Self {
+        (&m).into()
     }
 }
 

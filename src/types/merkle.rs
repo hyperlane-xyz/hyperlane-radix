@@ -162,14 +162,16 @@ pub struct MerkleTree {
     count: usize,
 }
 
-impl MerkleTree {
-    pub fn new() -> Self {
+impl Default for MerkleTree {
+    fn default() -> Self {
         Self {
             branch: ZERO_HASHES,
             count: 0,
         }
     }
+}
 
+impl MerkleTree {
     pub fn count(&self) -> usize {
         self.count
     }
@@ -205,12 +207,12 @@ impl MerkleTree {
         let mut current = Hash([0; 32]); // zero initialized 32 byte long hash
         let index = self.count;
 
-        for i in 0..TREE_DEPTH {
+        for (i, context) in ctx.iter().enumerate().take(TREE_DEPTH) {
             let next = self.branch[i];
             if (index >> i) & 0x1 > 0 {
                 current = hash_concat(next, current)
             } else {
-                current = hash_concat(current, ctx[i])
+                current = hash_concat(current, context)
             }
         }
         current

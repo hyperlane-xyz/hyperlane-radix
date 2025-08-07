@@ -14,7 +14,7 @@ pub fn verify_multisig(
     for i in 0..threshold {
         let signature = signatures
             .get(i)
-            .expect(&format!("Multisig: unable to get signature at {}", i));
+            .unwrap_or_else(|| panic!("Multisig: unable to get signature at {}", i));
 
         let signer = recover_eth_address(&digest, signature);
 

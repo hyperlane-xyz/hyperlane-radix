@@ -45,7 +45,7 @@ mod merkle_root_multisig_ism {
 
             let message: HyperlaneMessage = message.into();
             let signed_root = merkle_root_from_branch(
-                message.id().into(),
+                message.id(),
                 &metadata.merkle_proof,
                 metadata.message_index,
             );

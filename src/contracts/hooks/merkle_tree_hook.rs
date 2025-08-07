@@ -48,7 +48,7 @@ mod merkle_tree_hook {
 
             Self {
                 parent,
-                merkle_tree: MerkleTree::new(),
+                merkle_tree: MerkleTree::default(),
             }
             .instantiate()
             .prepare_to_globalize(OwnerRole::None)

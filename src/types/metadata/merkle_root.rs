@@ -50,10 +50,10 @@ impl From<Vec<u8>> for MultisigIsmMerkleRootMetadata {
         let merkle_proof_bytes = &bytes[MERKLE_PROOF..SIGNED_CHECKPOINT_INDEX];
 
         // Each Bytes32 is 32 bytes, so we need to process them in chunks
-        for i in 0..32 {
-            let start = i * 32;
+        for (index, proof) in merkle_proof.iter_mut().enumerate() {
+            let start = index * 32;
             let end = start + 32;
-            merkle_proof[i] = merkle_proof_bytes[start..end].into();
+            *proof = merkle_proof_bytes[start..end].into();
         }
 
         let signed_checkpoint_index_bytes: [u8; 4] = bytes
