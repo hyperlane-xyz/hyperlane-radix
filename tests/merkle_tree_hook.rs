@@ -16,14 +16,12 @@ fn create_merkle_tree_hook(suite: &mut Suite, caller: ComponentAddress) -> Trans
         .deposit_entire_worktop(suite.account.address)
         .build();
 
-    let receipt = suite.ledger.execute_manifest(
+    suite.ledger.execute_manifest(
         manifest,
         vec![NonFungibleGlobalId::from_public_key(
             &suite.account.public_key,
         )],
-    );
-
-    receipt
+    )
 }
 
 fn merkle_root(suite: &mut Suite, component_address: ComponentAddress) -> Hash {
@@ -64,15 +62,13 @@ pub fn merkle_tree_post_dispatch(
     let no_auth_config =
         ExecutionConfig::for_auth_disabled_system_transaction(NetworkDefinition::simulator());
 
-    let receipt = suite.ledger.execute_manifest_with_execution_config(
+    suite.ledger.execute_manifest_with_execution_config(
         manifest,
         vec![NonFungibleGlobalId::from_public_key(
             &suite.account.public_key,
         )],
         no_auth_config,
-    );
-
-    receipt
+    )
 }
 
 fn hex_str_to_bytes32(hex_string: &str) -> Bytes32 {
@@ -82,7 +78,7 @@ fn hex_str_to_bytes32(hex_string: &str) -> Bytes32 {
 #[test]
 fn test_create_merkle_tree_hook() {
     let mut suite = common::setup();
-    let caller = suite.account.address.clone();
+    let caller = suite.account.address;
     let receipt = create_merkle_tree_hook(&mut suite, caller);
     receipt.expect_commit_success();
 }
@@ -90,7 +86,7 @@ fn test_create_merkle_tree_hook() {
 #[test]
 fn test_empty_root() {
     let mut suite = common::setup();
-    let caller = suite.account.address.clone();
+    let caller = suite.account.address;
     let receipt = create_merkle_tree_hook(&mut suite, caller);
     receipt.expect_commit_success();
     let component_address = receipt.expect_commit_success().new_component_addresses()[0];
@@ -106,12 +102,12 @@ fn test_empty_root() {
 #[test]
 fn test_example() {
     let mut suite = common::setup();
-    let caller = suite.account.address.clone();
+    let caller = suite.account.address;
     let receipt = create_merkle_tree_hook(&mut suite, caller);
     receipt.expect_commit_success();
     let component_address = receipt.expect_commit_success().new_component_addresses()[0];
 
-    let expected_hashes = vec![
+    let expected_hashes = [
         "10df2f89cb24ed6078fc3949b4870e94a7e32e40e8d8c6b7bd74ccc2c933d760",
         "080ef1c2cd394de78363ecb0a466c934b57de4abb5604a0684e571990eb7b073",
         "bf78ad252da524f1e733aa6b83514dd83225676b5828f888f01487108f8f7cc7",

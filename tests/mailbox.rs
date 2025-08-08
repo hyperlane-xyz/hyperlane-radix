@@ -76,14 +76,12 @@ pub fn dispatch_message(
         .deposit_batch(suite.account.address, ManifestExpression::EntireWorktop)
         .build();
 
-    let receipt = suite.ledger.execute_manifest(
+    suite.ledger.execute_manifest(
         manifest,
         vec![NonFungibleGlobalId::from_public_key(
             &suite.account.public_key,
         )],
-    );
-
-    receipt
+    )
 }
 
 #[test]
@@ -196,7 +194,7 @@ fn test_process_message_recipient_no_app() {
     }
     .into();
 
-    let visible_components: Vec<ComponentAddress> = vec![suite.dummy_accounts[0].address.into()];
+    let visible_components: Vec<ComponentAddress> = vec![suite.dummy_accounts[0].address];
     let receipt = suite.call_method(
         mailbox_address.unwrap(),
         "process",
@@ -212,7 +210,7 @@ fn test_dispatch_message() {
     let (receipt, mailbox_address, _) = create_mailbox(&mut suite, 100);
     receipt.expect_commit_success();
 
-    let address = suite.account.address.clone();
+    let address = suite.account.address;
     let r = dispatch_message(
         &mut suite,
         mailbox_address.unwrap(),
@@ -234,7 +232,7 @@ fn test_dispatch_message_invalid_claimed_sender() {
     receipt.expect_commit_success();
 
     // Choose an invalid dummy account as sender here
-    let address = suite.dummy_accounts[0].address.clone();
+    let address = suite.dummy_accounts[0].address;
     let r = dispatch_message(
         &mut suite,
         mailbox_address.unwrap(),
