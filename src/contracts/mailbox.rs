@@ -1,6 +1,7 @@
 use crate::types::metadata::StandardHookMetadata;
 use crate::types::Bytes32;
 use crate::types::{HyperlaneMessage, MessageSender, MESSAGE_VERSION};
+use crate::{format_error, panic_error};
 use scrypto::blueprint;
 use scrypto::prelude::*;
 
@@ -66,10 +67,10 @@ mod mailbox {
             // reserve an address for the component
             let (address_reservation, component_address) =
                 Runtime::allocate_component_address(Mailbox::blueprint_id());
-
             let owner_badge = ResourceBuilder::new_fungible(OwnerRole::None)
                 .metadata(metadata!(init {
-                    "name" => format!("Hyperlane Mailbox Owner Badge {}", Runtime::bech32_encode_address(component_address)), locked;
+                    "name" => "Mailbox Owner Badge", locked;
+                    "component" => component_address, locked;
                 }))
                 .divisibility(DIVISIBILITY_NONE)
                 .mint_initial_supply(1);
@@ -175,8 +176,8 @@ mod mailbox {
                     "post_dispatch",
                     scrypto_args!(hook_metadata.clone(), hyperlane_message.clone(), payment),
                 );
-
-                payment = scrypto_decode(&result).expect("Failed to decode post_dispatch result");
+                payment = scrypto_decode(&result)
+                    .expect(&format_error!("failed to decode post_dispatch result"));
             }
             if let Some(required_hook) = self.required_hook {
                 let result = ScryptoVmV1Api::object_call(
@@ -184,8 +185,8 @@ mod mailbox {
                     "post_dispatch",
                     scrypto_args!(hook_metadata, hyperlane_message.clone(), payment),
                 );
-
-                payment = scrypto_decode(&result).expect("Failed to decode post_dispatch result");
+                payment = scrypto_decode(&result)
+                    .expect(&format_error!("failed to decode post_dispatch result"));
             }
 
             // the dispatch sequence is equal to the nonce of the message
@@ -237,7 +238,8 @@ mod mailbox {
                     scrypto_args!(hook_metadata.clone(), hyperlane_message.clone()),
                 );
 
-                quote = scrypto_decode(&result).expect("Failed to decode post_dispatch result");
+                quote = scrypto_decode(&result)
+                    .expect(&format_error!("failed to decode post_dispatch result"));
             }
             if let Some(required_hook) = self.required_hook {
                 let result = ScryptoVmV1Api::object_call(
@@ -247,12 +249,17 @@ mod mailbox {
                 );
 
                 let required_hook_quote: IndexMap<ResourceAddress, Decimal> =
-                    scrypto_decode(&result).expect("Failed to decode post_dispatch result");
+                    scrypto_decode(&result)
+                        .expect(&format_error!("failed to decode post_dispatch result"));
 
                 for (key, value) in required_hook_quote.iter() {
                     quote
                         .entry(*key)
-                        .and_modify(|existing| *existing += *value) // TODO: double check if this can result in overflow
+                        .and_modify(|existing: &mut Decimal| {
+                            *existing = existing
+                                .checked_add(*value)
+                                .expect(&format_error!("encountered overflow on quote_dispatch"))
+                        })
                         .or_insert(*value);
                 }
             }
@@ -288,16 +295,16 @@ mod mailbox {
             let message: HyperlaneMessage = raw_message.clone().into();
 
             if self.local_domain != message.destination {
-                panic!("Message destination domain does not match local domain");
+                panic_error!("message destination domain does not match local domain");
             }
 
             if message.version != MESSAGE_VERSION {
-                panic!("Unsupported message version");
+                panic_error!("unsupported message version");
             }
 
             let message_id = message.id();
             if self.delivered(message_id) {
-                panic!("Message already processed");
+                panic_error!("message already processed");
             }
             self.processed_messages.insert(message_id, ());
 
@@ -306,17 +313,19 @@ mod mailbox {
             // Call the ISM to verify the message
             let recipient_ism = self
                 .recipient_ism(recipient_component)
-                .expect("Neither mailbox nor receiver have specified an ISM");
+                .expect(&format_error!(
+                    "neither mailbox nor receiver have specified an ISM"
+                ));
             let result = ScryptoVmV1Api::object_call(
                 recipient_ism.as_node_id(),
                 "verify",
                 scrypto_args!(metadata, raw_message.clone()),
             );
 
-            let result: bool =
-                scrypto_decode(&result).expect("Failed to decode ISM verification result");
+            let result: bool = scrypto_decode(&result)
+                .expect(&format_error!("failed to decode ISM verification result"));
             if !result {
-                panic!("Mailbox: ISM verification failed");
+                panic_error!("ISM verification failed");
             }
 
             Runtime::emit_event(ProcessEvent {
@@ -345,8 +354,8 @@ mod mailbox {
             let result =
                 ScryptoVmV1Api::object_call(recipient.as_node_id(), "ism", scrypto_args!());
 
-            let return_value: Option<ComponentAddress> =
-                scrypto_decode(&result).expect("Failed to get ISM from recipient component");
+            let return_value: Option<ComponentAddress> = scrypto_decode(&result)
+                .expect(&format_error!("failed to get ISM from recipient component"));
 
             return_value.or(self.default_ism)
         }

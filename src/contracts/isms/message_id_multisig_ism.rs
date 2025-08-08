@@ -1,10 +1,10 @@
 use crate::contracts::isms::multisig_ism::verify_multisig;
 use crate::contracts::isms::types::Types;
+use crate::panic_error;
 use crate::types::metadata::MultisigIsmMessageIdMetadata;
 use crate::types::EthAddress;
 use crate::types::HyperlaneMessage;
 use scrypto::prelude::*;
-// TODO: make this implement the ism trait
 
 #[blueprint]
 mod message_id_mutlsig_ism {
@@ -19,7 +19,9 @@ mod message_id_mutlsig_ism {
             validators: Vec<EthAddress>,
             threshold: usize,
         ) -> Global<MessageIdMultisigIsm> {
-            // TODO: assert correct threshold & uniqueness
+            if validators.len() < threshold {
+                panic_error!("threshold must be less than or equal to the number of validators");
+            }
             Self {
                 validators,
                 threshold,

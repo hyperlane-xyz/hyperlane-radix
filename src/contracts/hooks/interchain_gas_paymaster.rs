@@ -2,6 +2,7 @@ use scrypto::prelude::*;
 
 use crate::{
     contracts::hooks::types::Types,
+    format_error, panic_error,
     types::{metadata::StandardHookMetadata, Bytes32, HyperlaneMessage},
 };
 #[derive(ScryptoSbor)]
@@ -26,13 +27,12 @@ struct GasPayment {
     pub sequence: u32,
 }
 
+pub const EXCHANGE_RATE_SCALE: u64 = 10_000_000_000u64; // 1e10
+pub const DEFAULT_GAS: u64 = 50_000u64;
+
 #[blueprint]
 #[events(GasPayment)]
 mod interchain_gas_paymaster {
-
-    // TODO: maybe model this with decimals
-    const EXCHANGE_RATE_SCALE: u64 = 10_000_000_000u64; // 1e10
-    const DEFAULT_GAS: usize = 1usize;
 
     enable_method_auth! {
         // decide which methods are public and which are restricted to the component's owner
@@ -52,7 +52,6 @@ mod interchain_gas_paymaster {
         }
     }
 
-    // TODO: configure public / owner methods like on the mailbox
     struct InterchainGasPaymaster {
         // map from domain -> gas config
         destination_gas_configs: KeyValueStore<u32, DestinationGasConfig>,
@@ -77,7 +76,8 @@ mod interchain_gas_paymaster {
 
             let owner_badge = ResourceBuilder::new_fungible(OwnerRole::None)
                 .metadata(metadata!(init {
-                    "name" => format!("Hyperlane InterchainGasPaymaster Owner Badge {}", Runtime::bech32_encode_address(component_address)), locked;
+                    "name" => "InterchainGasPaymaster Owner Badge", locked;
+                    "component" => component_address, locked;
                 }))
                 .divisibility(DIVISIBILITY_NONE)
                 .mint_initial_supply(1);
@@ -109,7 +109,7 @@ mod interchain_gas_paymaster {
         fn get_config(&self, destination: u32) -> KeyValueEntryRef<DestinationGasConfig> {
             self.destination_gas_configs
                 .get(&destination)
-                .expect("IGP: no config for destination")
+                .expect(&format_error!("no config for destination"))
         }
 
         pub fn set_destination_gas_configs(&mut self, configs: Vec<(u32, DestinationGasConfig)>) {
@@ -118,7 +118,6 @@ mod interchain_gas_paymaster {
             }
         }
 
-        // TODO: I believe decimal is an incorrect use here, we should instead use I192
         pub fn destination_gas_limit(&self, destination: u32, gas_limit: Decimal) -> Decimal {
             let config = self.get_config(destination);
             gas_limit.saturating_add(config.gas_overhead.into())
@@ -128,14 +127,16 @@ mod interchain_gas_paymaster {
             let config = self
                 .destination_gas_configs
                 .get(&destination)
-                .expect("IGP: no config for destination");
+                .expect(&format_error!("no config for destination"));
 
             // The total cost quoted in destination chain's igp token.
             gas_limit
                 .checked_mul(config.gas_oracle.gas_price)
                 .and_then(|gas_cost| gas_cost.checked_mul(config.gas_oracle.token_exchange_rate))
                 .and_then(|gas_cost| gas_cost.checked_div(EXCHANGE_RATE_SCALE))
-                .expect("IGP: decimal overflow when performing gas price calculation")
+                .expect(&format_error!(
+                    "decimal overflow when performing gas price calculation"
+                ))
         }
 
         pub fn claim(&mut self) -> FungibleBucket {
@@ -151,8 +152,8 @@ mod interchain_gas_paymaster {
         ) -> FungibleBucket {
             let required_payment = self.quote_gas_payment(destination, gas_limit);
             if payment.amount() < required_payment {
-                panic!(
-                    "IGP: payment for gas does not match IGP quote. quote: {}",
+                panic_error!(
+                    "payment for gas does not match IGP quote. quote: {}",
                     required_payment
                 )
             }
@@ -188,7 +189,7 @@ mod interchain_gas_paymaster {
             let position = payment
                 .iter()
                 .position(|x| x.resource_address() == self.resource_address)
-                .expect("IGP: no payment found for resource address");
+                .expect(&format_error!("no payment found for resource address"));
 
             // Remove the payment from the vector to take ownership of it
             let resource_payment = payment.remove(position);

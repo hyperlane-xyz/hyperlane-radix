@@ -1,4 +1,5 @@
 use crate::contracts::isms::types::Types;
+use crate::format_error;
 use crate::types::HyperlaneMessage;
 use scrypto::prelude::*;
 
@@ -33,10 +34,8 @@ mod routing_ism {
             // create new owner badge
             let owner_badge = ResourceBuilder::new_fungible(OwnerRole::None)
                 .metadata(metadata!(init {
-                    "name" => format!(
-                        "Hyperlane Routing Ism Owner Badge {}",
-                        Runtime::bech32_encode_address(component_address)
-                    ), locked;
+                    "name" => "Routing Ism Owner Badge", locked;
+                    "component" => component_address, locked;
                 }))
                 .divisibility(DIVISIBILITY_NONE)
                 .mint_initial_supply(1);
@@ -68,7 +67,7 @@ mod routing_ism {
             let ism = self
                 .routes
                 .get(&message.origin)
-                .expect(format!("No ISM for route {}", message.origin).as_str());
+                .expect(&format_error!("no ISM for route {}", message.origin));
 
             *ism
         }
@@ -82,7 +81,8 @@ mod routing_ism {
                 scrypto_args!(raw_metadata, raw_message),
             );
 
-            scrypto_decode(&result).expect("Failed to decode ISM verification result")
+            scrypto_decode(&result)
+                .expect(&format_error!("failed to decode ISM verification result"))
         }
 
         pub fn set_route(&mut self, domain: u32, ism_address: ComponentAddress) {

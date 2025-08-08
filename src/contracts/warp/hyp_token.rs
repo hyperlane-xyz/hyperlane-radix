@@ -1,4 +1,5 @@
 use crate::{
+    format_error, panic_error,
     types::Bytes32,
     types::{
         metadata::StandardHookMetadata, warp_payload::WarpPayload, HyperlaneMessage, MessageSender,
@@ -98,13 +99,13 @@ mod hyp_token {
             let owner_badge = ResourceBuilder::new_fungible(OwnerRole::None)
                 .metadata(metadata!(init {
                     "name" => format!(
-                        "Hyperlane {} Token Owner Badge {}",
+                        "{} Token Owner Badge",
                         (match token_type {
                             HypTokenType::Synthetic {..} => "Synthetic",
                             HypTokenType::Collateral {..} => "Collateral"
                         }),
-                        Runtime::bech32_encode_address(component_address)
                     ), locked;
+                    "component" => component_address, locked;
                 }))
                 .divisibility(DIVISIBILITY_NONE)
                 .mint_initial_supply(1);
@@ -237,8 +238,8 @@ mod hyp_token {
             // Get remote-router to know destination address and expected gas
             let router = self
                 .enrolled_routers
-                .get(&mut destination.clone())
-                .expect("No route enrolled for destination");
+                .get(&destination)
+                .expect(&format_error!("no route enrolled for destination"));
 
             // Payload for the Hyperlane message
             let payload = WarpPayload::new(recipient, token_amount);
@@ -270,7 +271,7 @@ mod hyp_token {
 
             // Return change-money of the interchain fee, if the user provided too much.
             let (_, bucket): (Bytes32, Vec<FungibleBucket>) =
-                scrypto_decode(&result).expect("Failed to decode dispatch result");
+                scrypto_decode(&result).expect(&format_error!("failed to decode dispatch result"));
 
             bucket
         }
@@ -284,10 +285,9 @@ mod hyp_token {
             let remote_router = self
                 .enrolled_routers
                 .get(&destination_domain)
-                .expect("No router enrolled for domain");
+                .expect(&format_error!("no router enrolled for domain"));
 
-            let payload: WarpPayload = WarpPayload::new(recipient, amount).into();
-            let payload: Vec<u8> = payload.into();
+            let payload: Vec<u8> = WarpPayload::new(recipient, amount).into();
 
             let standard_hook_metadata = StandardHookMetadata {
                 gas_limit: remote_router.gas,
@@ -307,7 +307,7 @@ mod hyp_token {
                 ),
             );
 
-            scrypto_decode(&result).expect("Failed to decode dispatch result")
+            scrypto_decode(&result).expect(&format_error!("failed to decode dispatch result"))
         }
 
         /*
@@ -320,20 +320,20 @@ mod hyp_token {
         pub fn handle(&mut self, raw_message: Vec<u8>, visible_components: Vec<ComponentAddress>) {
             let hyperlane_message: HyperlaneMessage = raw_message.into();
 
-            let router = self
-                .enrolled_routers
-                .get(&hyperlane_message.origin)
-                .expect(&format!(
-                    "No enrolled router for domain {:?}",
-                    hyperlane_message.origin
-                ));
+            let router =
+                self.enrolled_routers
+                    .get(&hyperlane_message.origin)
+                    .expect(&format_error!(
+                        "no enrolled router for domain {:?}",
+                        hyperlane_message.origin
+                    ));
 
             assert_eq!(router.recipient, hyperlane_message.sender);
 
             let warp_payload: WarpPayload = hyperlane_message.body.clone().into();
 
-            if visible_components.len() == 0 {
-                panic!(
+            if visible_components.is_empty() {
+                panic_error!(
                     "RequiredAddresses: {}",
                     Runtime::bech32_encode_address(warp_payload.component_address())
                 )

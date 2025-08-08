@@ -47,22 +47,21 @@ pub fn eth_hash(msg: &[u8]) -> Hash {
     let prefix = format!("\x19Ethereum Signed Message:\n{}", msg.len());
     let mut bytes: Vec<_> = prefix.into_bytes();
     bytes.extend(msg);
-    let hash = keccak256_hash(bytes);
-    hash
+    keccak256_hash(bytes)
 }
 
 pub fn domain_hash(local_domain: u32, address: &[u8]) -> Hash {
     let mut bytes = local_domain.to_be_bytes().to_vec();
     bytes.extend(address);
     bytes.extend("HYPERLANE".as_bytes());
-    return keccak256_hash(bytes);
+    keccak256_hash(bytes)
 }
 
 pub fn announcement_domain_hash(local_domain: u32, address: &[u8]) -> Hash {
     let mut bytes = local_domain.to_be_bytes().to_vec();
     bytes.extend(address);
     bytes.extend("HYPERLANE_ANNOUNCEMENT".as_bytes());
-    return keccak256_hash(bytes);
+    keccak256_hash(bytes)
 }
 
 pub fn announcement_digest(
@@ -81,11 +80,15 @@ pub fn recover_eth_address(digest: &Hash, signature: &Secp256k1Signature) -> Eth
     // For the CryptoUtils the recovery Id must be moved to the beginning
     // And it must be converted from an eth id (27/28) to a normal id (0/1)
     let mut signature: Vec<u8> = signature.to_vec();
-    let last = signature.pop().unwrap();
+    let last = signature.pop().expect("sig: invalid Secp256k1 signature");
     // Sub 27 of the recovery id according to this - https://eips.ethereum.org/EIPS/eip-155
     signature.insert(0, last - 27);
 
-    let signature = Secp256k1Signature(signature.try_into().unwrap());
+    let signature = Secp256k1Signature(
+        signature
+            .try_into()
+            .expect("sig: can't parse Secp256k1 signature"),
+    );
 
     let pubkey =
         CryptoUtils::secp256k1_ecdsa_verify_and_key_recover_uncompressed(digest, signature);

@@ -14,7 +14,7 @@ pub fn verify_multisig(
     for i in 0..threshold {
         let signature = signatures
             .get(i)
-            .expect(format!("MessageIdMultisig: unable to get signature at {}", i).as_str());
+            .unwrap_or_else(|| panic!("Multisig: unable to get signature at {}", i));
 
         let signer = recover_eth_address(&digest, signature);
 
@@ -23,7 +23,7 @@ pub fn verify_multisig(
         }
 
         if validator_index >= validator_count {
-            panic!("MessageIdMultisig: threshold not reached")
+            panic!("Multisig: threshold not reached")
         }
 
         validator_index += 1;
