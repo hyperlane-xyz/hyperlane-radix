@@ -62,12 +62,4 @@ scrypto test -- --nocapture
 
 ## Future Enhancements
 
-- Trait problem, a component like hooks should always have a given interface
-- IGP:
-  - IGP set destination gas config methods
-  - Public / Protected Methods enforcen
-  - move from Decimals to I192
-
-- Check on Finality (How do the Shards work) -> Consensus engine
-- have a dedicated metadata function for involved addresses which the relayer calls first
-- Proxy Contract upgradability
+- Use scrypto-interfaces

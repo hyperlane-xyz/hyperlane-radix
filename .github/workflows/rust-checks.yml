@@ -20,11 +20,11 @@ jobs:
           components: rustfmt
           override: true
 
-      - name: Run cargo fmt check
+      - name: Cargo Format
         run: cargo fmt -- --check
 
-      - name: Run cargo check
+      - name: Cargo Check
         run: cargo check
 
-      - name: Run cargo clippy
-        run: cargo clippy -- D warnings
+      - name: Clippy Linter
+        run: cargo clippy -- -D warnings
