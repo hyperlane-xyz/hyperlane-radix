@@ -1,0 +1,27 @@
+name: rust-fmt.yml
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  rustfmt:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          components: rustfmt
+          override: true
+
+      - name: Cargo Format
+        run: cargo fmt -- --check
+
+      - name: Cargo Check
+        run: cargo check

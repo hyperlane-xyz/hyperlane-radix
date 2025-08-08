@@ -1,0 +1,22 @@
+name: scrypto-test.yml
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  scrypto-test:
+    runs-on: ubuntu-latest
+
+    container:
+      image: radixdlt/scrypto-builder:v1.3.0
+      options: --user root
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run all tests
+        run: cargo test
