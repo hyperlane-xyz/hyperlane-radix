@@ -59,7 +59,6 @@ scrypto test -- --nocapture
 - [LayerZero implementation](https://github.com/radixdlt/layerzero/blob/main/tools/lz-cli/src/lz_core_api_client.rs)
 - [Step by step guide](https://docs.radixdlt.com/docs/learning-step-by-step)
 
-
 ## Future Enhancements
 
 - Use scrypto-interfaces

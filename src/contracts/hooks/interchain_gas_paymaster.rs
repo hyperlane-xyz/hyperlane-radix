@@ -106,6 +106,7 @@ mod interchain_gas_paymaster {
             self.sequence
         }
 
+        #[allow(mismatched_lifetime_syntaxes)]
         fn get_config(&self, destination: u32) -> KeyValueEntryRef<DestinationGasConfig> {
             self.destination_gas_configs
                 .get(&destination)
