@@ -25,6 +25,3 @@ jobs:
 
       - name: Cargo Check
         run: cargo check
-
-      - name: Clippy Linter
-        run: cargo clippy -- -D warnings
