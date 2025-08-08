@@ -1,1 +1,1 @@
-mod hyp_token;
+pub mod hyp_token;

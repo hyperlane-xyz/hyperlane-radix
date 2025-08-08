@@ -29,17 +29,17 @@ pub struct RemoteRouter {
 
 #[derive(ScryptoSbor, ScryptoEvent)]
 pub struct SendRemoteTransferEvent {
-    pub sender: Bytes32,
     pub destination_domain: u32,
-    pub recipient: Bytes32,
+    pub application_recipient: Bytes32,
+    pub user_recipient: Bytes32,
     pub amount: Decimal,
 }
 
 #[derive(ScryptoSbor, ScryptoEvent)]
 pub struct ReceiveRemoteTransferEvent {
-    pub sender: Bytes32,
     pub origin_domain: u32,
-    pub recipient: String,
+    pub application_sender: Bytes32,
+    pub user_recipient: String,
     pub amount: Decimal,
 }
 
@@ -86,7 +86,7 @@ mod hyp_token {
             token_type: HypTokenType,
             mailbox: ComponentAddress,
         ) -> (Global<HypToken>, FungibleBucket) {
-            // Create mailbox component rule to ensure that the "handle()" function can only
+            // Create a mailbox component rule to ensure that the "handle()" function can only
             // be called by the mailbox itself.
             let mailbox_component_rule =
                 rule!(require(NonFungibleGlobalId::global_caller_badge(mailbox)));
@@ -95,7 +95,7 @@ mod hyp_token {
             let (address_reservation, component_address) =
                 Runtime::allocate_component_address(HypToken::blueprint_id());
 
-            // create new owner badge
+            // create a new owner badge
             let owner_badge = ResourceBuilder::new_fungible(OwnerRole::None)
                 .metadata(metadata!(init {
                     "name" => format!(
@@ -239,15 +239,18 @@ mod hyp_token {
             let router = self
                 .enrolled_routers
                 .get(&destination)
-                .expect(&format_error!("no route enrolled for destination"));
+                .expect(&format_error!(
+                    "no route enrolled for destination {}",
+                    destination
+                ));
 
             // Payload for the Hyperlane message
             let payload = WarpPayload::new(recipient, token_amount);
 
             Runtime::emit_event(SendRemoteTransferEvent {
-                sender: Bytes32::zero(),
                 destination_domain: destination,
-                recipient,
+                application_recipient: router.recipient,
+                user_recipient: recipient,
                 amount: token_amount,
             });
 
@@ -353,9 +356,9 @@ mod hyp_token {
             );
 
             Runtime::emit_event(ReceiveRemoteTransferEvent {
-                sender: Bytes32::zero(),
+                application_sender: hyperlane_message.sender,
                 origin_domain: hyperlane_message.origin,
-                recipient: Runtime::bech32_encode_address(warp_payload.component_address()),
+                user_recipient: Runtime::bech32_encode_address(warp_payload.component_address()),
                 amount: warp_payload.amount,
             });
         }
