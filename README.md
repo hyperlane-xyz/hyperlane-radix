@@ -3,13 +3,18 @@
 > [!WARNING]  
 > This project is currently under development and not intended to be used in production.
 
-## Resources for Radix
+This project is an implementation of Hyperlane for the Radix DLT, designed for 
+a seamless interchain communication following the Hyperlane spec. 
 
-- [Examples](https://github.com/radixdlt/scrypto-examples)
-- [Challenges](https://github.com/radixdlt/scrypto-challenges)
-- [APIs](https://docs.radixdlt.com/docs/network-apis)
-- [LayerZero implementation](https://github.com/radixdlt/layerzero/blob/main/tools/lz-cli/src/lz_core_api_client.rs)
-- [Step by step guide](https://docs.radixdlt.com/docs/learning-step-by-step)
+## [src/contracts](./src/contracts)
+`contracts` is intended to implement the fundamental functionalities of the 
+Hyperlane protocol to dispatch and process messages, which can then be used by
+applications like `warp`. It includes mailboxes, hooks, Interchain Security 
+Modules (ISMs) as well as the Warp application for token transfers.
+
+## [src/types](./src/types)
+`types` contains structs which are reused across multiple components, containing
+basic Hyperlane types like messages, metadata and payloads, as well as others.
 
 ## Development
 
@@ -18,42 +23,42 @@ Getting started:
 ```
 https://docs.radixdlt.com/docs/setting-up-for-scrypto-development
 ```
-C-Make version
+C-Make version (You need to use Cmake 3.31)
 
 ```
-(base) ➜  hyperlane-radix (main) cmake --version                                  ✱
+(base) ➜  hyperlane-radix (main) cmake --version
 cmake version 3.31.7
 
 CMake suite maintained and supported by Kitware (kitware.com/cmake).
 ```
 
-Setting up local
+This command creates and initiates all required Hyperlane components for full 
+token bridging.
 
 ```
 source setup.sh
 ```
 
-Running local
+Run specific actions like sending a remote transfer.
 
 ```
 resim run manifest/warp/collateral/transfer_remote.rtm
 ```
 
-Run tests
+Run test suite.
 
 ```
 scrypto test -- --nocapture
 ```
 
-## TODOS
+## Resources for Radix
 
-- Trait problem, a component like hooks should always have a given interface
-- IGP:
-  - IGP set destination gas config methods
-  - Public / Protected Methods enforcen
-  - move from Decimals to I192
+- [Examples](https://github.com/radixdlt/scrypto-examples)
+- [Challenges](https://github.com/radixdlt/scrypto-challenges)
+- [APIs](https://docs.radixdlt.com/docs/network-apis)
+- [LayerZero implementation](https://github.com/radixdlt/layerzero/blob/main/tools/lz-cli/src/lz_core_api_client.rs)
+- [Step by step guide](https://docs.radixdlt.com/docs/learning-step-by-step)
 
-- Check on Finality (How do the Shards work) -> Consensus engine
-- have a dedicated metadata function for involved addresses which the relayer calls first
-- WARNING: Double check that proofs can not be forwarded; Proofs should be specific to that recipient, should not work for other recipients.
-- Proxy Contract upgradability
+## Future Enhancements
+
+- Use scrypto-interfaces
