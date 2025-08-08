@@ -87,13 +87,19 @@ fn test_invalid_relayer_message() {
     // Modify one byte
     message[0] = 1;
 
-    let validator: [u8; 20] = hex::decode("0c60e7eCd06429052223C78452F791AAb5C5CAc6")
+    let validator1: [u8; 20] = hex::decode("0c60e7eCd06429052223C78452F791AAb5C5CAc6")
+        .unwrap()
+        .try_into()
+        .unwrap();
+
+    let validator2: [u8; 20] = hex::decode("1c60e7eCd06429052223C78452F791AAb5C5CAc7")
         .unwrap()
         .try_into()
         .unwrap();
 
     let mut suite = common::setup();
-    let receipt = create_merkle_root_multisig_ism(&mut suite, vec![validator.into()], 2);
+    let receipt =
+        create_merkle_root_multisig_ism(&mut suite, vec![validator1.into(), validator2.into()], 2);
     receipt.expect_commit_success();
 
     let component_address = receipt.expect_commit_success().new_component_addresses()[0];
@@ -103,5 +109,5 @@ fn test_invalid_relayer_message() {
 
     // Assert
     assert!(format!("{:?}", receipt.expect_commit_failure())
-        .contains("MessageIdMultisig: threshold not reached"));
+        .contains("Multisig: threshold not reached"));
 }
