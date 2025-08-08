@@ -145,7 +145,7 @@ fn test_process_message_invalid_domain() {
     );
 
     assert!(format!("{:?}", receipt.expect_failure())
-        .contains("Message destination domain does not match local domain"))
+        .contains("Mailbox: message destination domain does not match local domain"))
 }
 
 #[test]
@@ -173,7 +173,9 @@ fn test_process_message_invalid_version() {
         manifest_args!(metadata, message, visible_components),
     );
 
-    assert!(format!("{:?}", receipt.expect_failure()).contains("Unsupported message version"))
+    assert!(
+        format!("{:?}", receipt.expect_failure()).contains("Mailbox: unsupported message version")
+    )
 }
 
 #[test]

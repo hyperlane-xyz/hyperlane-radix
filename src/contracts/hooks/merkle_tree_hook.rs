@@ -1,6 +1,7 @@
 use crate::types::{merkle::MerkleTree, Bytes32};
 use crate::{
     contracts::hooks::types::Types,
+    format_error,
     types::{metadata::StandardHookMetadata, HyperlaneMessage},
 };
 use scrypto::prelude::*;
@@ -87,7 +88,7 @@ mod merkle_tree_hook {
                 scrypto_args!(),
             );
 
-            scrypto_decode(&result).expect("Failed to decode domain result")
+            scrypto_decode(&result).expect(&format_error!("failed to decode domain result"))
         }
 
         /// Post-dispatch accepts a vec of buckets; that is the payment that the user is willing to

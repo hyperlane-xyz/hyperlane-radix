@@ -109,7 +109,8 @@ fn test_domain_does_not_exist() {
     let receipt = call_dummy_verify(&mut suite, component_address, 17);
 
     // Assert error message
-    assert!(format!("{:?}", receipt.expect_commit_failure()).contains("No ISM for route 17"));
+    assert!(format!("{:?}", receipt.expect_commit_failure())
+        .contains("RoutingIsm: no ISM for route 17"));
 }
 
 #[test]
@@ -216,5 +217,6 @@ fn test_remove_route() {
     // Assert error message
     receipt.expect_commit_success();
     let failure_receipt = call_dummy_verify(&mut suite, component_address, 1);
-    assert!(format!("{:?}", failure_receipt.expect_commit_failure()).contains("No ISM for route 1"));
+    assert!(format!("{:?}", failure_receipt.expect_commit_failure())
+        .contains("RoutingIsm: no ISM for route 1"));
 }
