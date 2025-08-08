@@ -19,14 +19,12 @@ fn create_routing_ism(
         .deposit_entire_worktop(suite.account.address)
         .build();
 
-    let receipt = suite.ledger.execute_manifest(
+    suite.ledger.execute_manifest(
         manifest,
         vec![NonFungibleGlobalId::from_public_key(
             &suite.account.public_key,
         )],
-    );
-
-    receipt
+    )
 }
 
 fn create_noop_ism(suite: &mut Suite) -> ComponentAddress {
@@ -124,7 +122,7 @@ fn test_non_owner_can_not_update_route() {
     let _owner_badge = receipt.expect_commit_success().new_resource_addresses()[0];
 
     let domain: u32 = 1;
-    let non_authorized_account = suite.dummy_accounts.get(0).unwrap().address;
+    let non_authorized_account = suite.dummy_accounts.first().unwrap().address;
 
     // Act
     let manifest = ManifestBuilder::new()

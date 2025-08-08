@@ -131,10 +131,10 @@ pub fn transfer_remote(
 
     let manifest = ManifestBuilder::new()
         .lock_fee_from_faucet()
-        .withdraw_from_account(suite.account.address, XRD, xrd_fee.clone())
-        .withdraw_from_account(suite.account.address, resource_address, amount.clone())
-        .take_from_worktop(XRD, xrd_fee.clone(), "hyperlane_fee")
-        .take_from_worktop(resource_address, amount.clone(), "amount")
+        .withdraw_from_account(suite.account.address, XRD, xrd_fee)
+        .withdraw_from_account(suite.account.address, resource_address, amount)
+        .take_from_worktop(XRD, xrd_fee, "hyperlane_fee")
+        .take_from_worktop(resource_address, amount, "amount")
         .call_method_with_name_lookup(token_component_address, "transfer_remote", |lookup| {
             manifest_args!(
                 destination,
@@ -148,14 +148,12 @@ pub fn transfer_remote(
         .deposit_batch(suite.account.address, ManifestExpression::EntireWorktop)
         .build();
 
-    let receipt = suite.ledger.execute_manifest(
+    suite.ledger.execute_manifest(
         manifest,
         vec![NonFungibleGlobalId::from_public_key(
             &suite.account.public_key,
         )],
-    );
-
-    receipt
+    )
 }
 
 #[test]

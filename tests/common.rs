@@ -63,14 +63,12 @@ impl Suite {
             .call_method(component_address, method_name, arguments)
             .build();
 
-        let receipt = self.ledger.execute_manifest(
+        self.ledger.execute_manifest(
             manifest,
             vec![NonFungibleGlobalId::from_public_key(
                 &self.account.public_key,
             )],
-        );
-
-        receipt
+        )
     }
 
     #[allow(dead_code)]
@@ -84,7 +82,7 @@ impl Suite {
         receipt.expect_commit_success();
         let outcome = receipt.expect_commit_success().outcome.expect_success();
         match outcome.get(1).unwrap() {
-            CallReturn(data) => scrypto_decode(&data).expect("Failed to decode result."),
+            CallReturn(data) => scrypto_decode(data).expect("Failed to decode result."),
             _ => panic!("No CallData returned."),
         }
     }
@@ -103,14 +101,12 @@ impl Suite {
             .call_method(component_address, method_name, arguments)
             .build();
 
-        let receipt = self.ledger.execute_manifest(
+        self.ledger.execute_manifest(
             manifest,
             vec![NonFungibleGlobalId::from_public_key(
                 &self.account.public_key,
             )],
-        );
-
-        receipt
+        )
     }
 
     #[allow(dead_code)]
@@ -126,7 +122,7 @@ impl Suite {
         receipt.expect_commit_success();
         let outcome = receipt.expect_commit_success().outcome.expect_success();
         match outcome.get(1).unwrap() {
-            CallReturn(data) => scrypto_decode(&data).expect("Failed to decode result."),
+            CallReturn(data) => scrypto_decode(data).expect("Failed to decode result."),
             _ => panic!("No CallData returned."),
         }
     }

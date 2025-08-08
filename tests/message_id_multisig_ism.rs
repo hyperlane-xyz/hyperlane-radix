@@ -21,14 +21,12 @@ fn create_message_id_multisig_ism(
         .deposit_entire_worktop(suite.account.address)
         .build();
 
-    let receipt = suite.ledger.execute_manifest(
+    suite.ledger.execute_manifest(
         manifest,
         vec![NonFungibleGlobalId::from_public_key(
             &suite.account.public_key,
         )],
-    );
-
-    receipt
+    )
 }
 
 fn metadata_to_vec(msg: &MultisigIsmMessageIdMetadata) -> Vec<u8> {
@@ -60,14 +58,12 @@ fn verify(
         )
         .build();
 
-    let receipt = suite.ledger.execute_manifest(
+    suite.ledger.execute_manifest(
         manifest,
         vec![NonFungibleGlobalId::from_public_key(
             &suite.account.public_key,
         )],
-    );
-
-    receipt
+    )
 }
 
 #[test]

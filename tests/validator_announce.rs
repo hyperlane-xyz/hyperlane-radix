@@ -57,14 +57,12 @@ fn announce(
         )
         .build();
 
-    let receipt = suite.ledger.execute_manifest(
+    suite.ledger.execute_manifest(
         manifest,
         vec![NonFungibleGlobalId::from_public_key(
             &suite.account.public_key,
         )],
-    );
-
-    receipt
+    )
 }
 
 fn create_validator_announce(suite: &mut Suite, mailbox: ComponentAddress) -> ComponentAddress {
