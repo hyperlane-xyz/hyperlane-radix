@@ -103,5 +103,5 @@ fn test_invalid_relayer_message() {
 
     // Assert
     assert!(format!("{:?}", receipt.expect_commit_failure())
-        .contains("MessageIdMultisig: threshold not reached"));
+        .contains("Multisig: threshold not reached"));
 }
