@@ -27,13 +27,12 @@ struct GasPayment {
     pub sequence: u32,
 }
 
+pub const EXCHANGE_RATE_SCALE: u64 = 10_000_000_000u64; // 1e10
+pub const DEFAULT_GAS: u64 = 50_000u64;
+
 #[blueprint]
 #[events(GasPayment)]
 mod interchain_gas_paymaster {
-
-    // TODO: maybe model this with decimals
-    const EXCHANGE_RATE_SCALE: u64 = 10_000_000_000u64; // 1e10
-    const DEFAULT_GAS: usize = 1usize;
 
     enable_method_auth! {
         // decide which methods are public and which are restricted to the component's owner
@@ -119,7 +118,6 @@ mod interchain_gas_paymaster {
             }
         }
 
-        // TODO: I believe decimal is an incorrect use here, we should instead use I192
         pub fn destination_gas_limit(&self, destination: u32, gas_limit: Decimal) -> Decimal {
             let config = self.get_config(destination);
             gas_limit.saturating_add(config.gas_overhead.into())

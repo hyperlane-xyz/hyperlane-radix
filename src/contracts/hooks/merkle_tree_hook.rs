@@ -12,15 +12,13 @@ pub struct InsertedIntoTreeEvent {
     pub index: u32,
 }
 
-// TODO: create a hook trait that each hook has to implement
-// it should implement a set of default methods
 #[blueprint]
 #[events(InsertedIntoTreeEvent)]
 mod merkle_tree_hook {
 
     enable_method_auth! {
         roles {
-            mailbox_component => updatable_by: [];
+            parent_component => updatable_by: [];
         },
         methods {
             // Public
@@ -32,31 +30,30 @@ mod merkle_tree_hook {
             local_domain => PUBLIC;
             quote_dispatch => PUBLIC;
             // Mailbox Only
-            post_dispatch => restrict_to: [mailbox_component];
+            post_dispatch => restrict_to: [parent_component];
         }
     }
 
     struct MerkleTreeHook {
         merkle_tree: MerkleTree,
-        // TODO consider renaming to a more generic name, as there might be other callers
-        mailbox: ComponentAddress,
+        parent: ComponentAddress,
     }
 
     impl MerkleTreeHook {
-        pub fn instantiate(mailbox: ComponentAddress) -> Global<MerkleTreeHook> {
+        pub fn instantiate(parent: ComponentAddress) -> Global<MerkleTreeHook> {
             // Create mailbox component rule to ensure that the "post_dispatch()" function can only
             // be called by the mailbox itself.
             let mailbox_component_rule =
-                rule!(require(NonFungibleGlobalId::global_caller_badge(mailbox)));
+                rule!(require(NonFungibleGlobalId::global_caller_badge(parent)));
 
             Self {
-                mailbox,
-                merkle_tree: MerkleTree::new(),
+                parent,
+                merkle_tree: MerkleTree::default(),
             }
             .instantiate()
             .prepare_to_globalize(OwnerRole::None)
             .roles(roles! {
-                mailbox_component => mailbox_component_rule;
+                parent_component => mailbox_component_rule;
             })
             .globalize()
         }
@@ -66,7 +63,7 @@ mod merkle_tree_hook {
         }
 
         pub fn count(&self) -> u32 {
-            self.merkle_tree.count() as u32 // TODO: enforce size limit
+            self.merkle_tree.count() as u32
         }
 
         pub fn tree(&self) -> MerkleTree {
@@ -83,7 +80,7 @@ mod merkle_tree_hook {
 
         pub fn local_domain(&self) -> u32 {
             let result = ScryptoVmV1Api::object_call(
-                self.mailbox.as_node_id(),
+                self.parent.as_node_id(),
                 "local_domain",
                 scrypto_args!(),
             );

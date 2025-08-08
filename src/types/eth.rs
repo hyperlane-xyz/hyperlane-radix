@@ -47,22 +47,21 @@ pub fn eth_hash(msg: &[u8]) -> Hash {
     let prefix = format!("\x19Ethereum Signed Message:\n{}", msg.len());
     let mut bytes: Vec<_> = prefix.into_bytes();
     bytes.extend(msg);
-    let hash = keccak256_hash(bytes);
-    hash
+    keccak256_hash(bytes)
 }
 
 pub fn domain_hash(local_domain: u32, address: &[u8]) -> Hash {
     let mut bytes = local_domain.to_be_bytes().to_vec();
     bytes.extend(address);
     bytes.extend("HYPERLANE".as_bytes());
-    return keccak256_hash(bytes);
+    keccak256_hash(bytes)
 }
 
 pub fn announcement_domain_hash(local_domain: u32, address: &[u8]) -> Hash {
     let mut bytes = local_domain.to_be_bytes().to_vec();
     bytes.extend(address);
     bytes.extend("HYPERLANE_ANNOUNCEMENT".as_bytes());
-    return keccak256_hash(bytes);
+    keccak256_hash(bytes)
 }
 
 pub fn announcement_digest(

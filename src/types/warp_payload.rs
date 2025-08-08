@@ -36,7 +36,7 @@ impl From<RawWarpPayload> for WarpPayload {
 
 impl From<&RawWarpPayload> for WarpPayload {
     fn from(m: &RawWarpPayload) -> Self {
-        let recipient: Bytes32 = m[0..32].try_into().unwrap();
+        let recipient: Bytes32 = m[0..32].into();
 
         // Next 32 bytes encode the amount
         // In the future it might be possible that the warp payload carries additional metadata
@@ -61,14 +61,14 @@ impl From<&WarpPayload> for RawWarpPayload {
 
         let mut message_vec: Vec<u8> = vec![];
         message_vec.extend_from_slice(w.recipient.as_ref());
-        message_vec.extend_from_slice(&*amount);
+        message_vec.extend_from_slice(&amount);
         message_vec
     }
 }
 
-impl Into<Vec<u8>> for WarpPayload {
-    fn into(self) -> Vec<u8> {
-        RawWarpPayload::from(&self)
+impl From<WarpPayload> for Vec<u8> {
+    fn from(w: WarpPayload) -> Self {
+        RawWarpPayload::from(&w)
     }
 }
 

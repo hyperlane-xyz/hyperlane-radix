@@ -142,11 +142,7 @@ pub const ZERO_HASHES: [Hash; TREE_DEPTH] = [
 ];
 
 /// Compute a root hash from a leaf and a Merkle proof.
-pub fn merkle_root_from_branch(
-    leaf: Bytes32,
-    branch: &[Bytes32; TREE_DEPTH],
-    index: u32, // u32 is valid as the tree depth is 32 TODO: make this type depended
-) -> Hash {
+pub fn merkle_root_from_branch(leaf: Bytes32, branch: &[Bytes32; TREE_DEPTH], index: u32) -> Hash {
     let mut current = leaf.into();
 
     for (i, next) in branch.iter().enumerate() {
@@ -166,14 +162,16 @@ pub struct MerkleTree {
     count: usize,
 }
 
-impl MerkleTree {
-    pub fn new() -> Self {
+impl Default for MerkleTree {
+    fn default() -> Self {
         Self {
             branch: ZERO_HASHES,
             count: 0,
         }
     }
+}
 
+impl MerkleTree {
     pub fn count(&self) -> usize {
         self.count
     }
@@ -209,12 +207,12 @@ impl MerkleTree {
         let mut current = Hash([0; 32]); // zero initialized 32 byte long hash
         let index = self.count;
 
-        for i in 0..TREE_DEPTH {
+        for (i, context) in ctx.iter().enumerate().take(TREE_DEPTH) {
             let next = self.branch[i];
             if (index >> i) & 0x1 > 0 {
                 current = hash_concat(next, current)
             } else {
-                current = hash_concat(current, ctx[i])
+                current = hash_concat(current, context)
             }
         }
         current

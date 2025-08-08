@@ -238,7 +238,7 @@ mod hyp_token {
             // Get remote-router to know destination address and expected gas
             let router = self
                 .enrolled_routers
-                .get(&mut destination.clone())
+                .get(&destination)
                 .expect(&format_error!("no route enrolled for destination"));
 
             // Payload for the Hyperlane message
@@ -287,8 +287,7 @@ mod hyp_token {
                 .get(&destination_domain)
                 .expect(&format_error!("no router enrolled for domain"));
 
-            let payload: WarpPayload = WarpPayload::new(recipient, amount).into();
-            let payload: Vec<u8> = payload.into();
+            let payload: Vec<u8> = WarpPayload::new(recipient, amount).into();
 
             let standard_hook_metadata = StandardHookMetadata {
                 gas_limit: remote_router.gas,
@@ -333,7 +332,7 @@ mod hyp_token {
 
             let warp_payload: WarpPayload = hyperlane_message.body.clone().into();
 
-            if visible_components.len() == 0 {
+            if visible_components.is_empty() {
                 panic_error!(
                     "RequiredAddresses: {}",
                     Runtime::bech32_encode_address(warp_payload.component_address())
