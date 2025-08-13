@@ -256,6 +256,12 @@ mod hyp_token {
 
             let payload: Vec<u8> = payload.into();
 
+            let standard_hook_metadata =
+                standard_hook_metadata.unwrap_or_else(|| StandardHookMetadata {
+                    gas_limit: router.gas,
+                    custom_bytes: None,
+                });
+
             // Dispatch payload to mailbox
             let result = ScryptoVmV1Api::object_call(
                 self.mailbox.as_node_id(),
@@ -266,7 +272,7 @@ mod hyp_token {
                     payload,
                     // TODO test if custom hook with metadata is working
                     custom_hook,
-                    standard_hook_metadata,
+                    Some(standard_hook_metadata),
                     hyp_fee_payment,
                     MessageSender::Component(Runtime::global_component())
                 ),
