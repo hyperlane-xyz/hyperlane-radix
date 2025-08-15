@@ -51,14 +51,37 @@ Run test suite.
 scrypto test -- --nocapture
 ```
 
-## Resources for Radix
-
-- [Examples](https://github.com/radixdlt/scrypto-examples)
-- [Challenges](https://github.com/radixdlt/scrypto-challenges)
-- [APIs](https://docs.radixdlt.com/docs/network-apis)
-- [LayerZero implementation](https://github.com/radixdlt/layerzero/blob/main/tools/lz-cli/src/lz_core_api_client.rs)
-- [Step by step guide](https://docs.radixdlt.com/docs/learning-step-by-step)
-
 ## Future Enhancements
 
 - Use scrypto-interfaces
+
+## Contributing
+
+Thank you for considering contributing to this project.
+
+**Overview**
+
+- The latest state of development is on `main`.
+- `main` must always pass `scrypto test` and `cargo fmt`.
+- Everything must be covered by tests.
+
+**Creating a Pull Request**
+
+- Check out the latest state from main and always keep the PR in sync with main.
+- Use [conventional commits](https://www.conventionalcommits.org/en/v1.0.0/#specification).
+- Only one feature per pull request.
+- Write an entry for the Changelog.
+- Write tests covering 100% of your modified code.
+- The Github actions must pass.
+
+**Legal**
+
+You agree that your contribution is licenced under the given [LICENSE](LICENSE) 
+and all ownership is handed over to authors listed in the section below.
+
+## License
+
+This project is licensed under the Apache License, Version 2.0.  
+See the [LICENSE](LICENSE) file for the full terms.
+
+Copyright 2025 Abacus Works
