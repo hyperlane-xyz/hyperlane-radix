@@ -51,14 +51,13 @@ Run test suite.
 scrypto test -- --nocapture
 ```
 
-## Resources for Radix
-
-- [Examples](https://github.com/radixdlt/scrypto-examples)
-- [Challenges](https://github.com/radixdlt/scrypto-challenges)
-- [APIs](https://docs.radixdlt.com/docs/network-apis)
-- [LayerZero implementation](https://github.com/radixdlt/layerzero/blob/main/tools/lz-cli/src/lz_core_api_client.rs)
-- [Step by step guide](https://docs.radixdlt.com/docs/learning-step-by-step)
-
 ## Future Enhancements
 
 - Use scrypto-interfaces
+
+## License
+
+This project is licensed under the Apache License, Version 2.0.  
+See the [LICENSE](LICENSE) file for the full terms.
+
+Copyright 2025 Abacus Works, Inc.
