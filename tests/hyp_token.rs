@@ -51,6 +51,7 @@ fn create_collateral_token(
 fn create_synthetic_token(
     suite: &mut Suite,
     mailbox_component: ComponentAddress,
+    divisibility: u8,
 ) -> (ComponentAddress, ResourceAddress, ResourceAddress) {
     let result = suite.instantiate_blueprint(
         "HypToken",
@@ -67,7 +68,9 @@ fn create_synthetic_token(
                     ManifestValue::String {
                         value: "Native ETH from Ethereum".to_string()
                     },
-                    ManifestValue::U8 { value: 18 },
+                    ManifestValue::U8 {
+                        value: divisibility
+                    },
                 ]
             ),
             mailbox_component
@@ -303,7 +306,7 @@ fn test_synthetic_create_token() {
     let mut suite = common::setup();
     let mailbox_component = setup_mailbox(&mut suite);
 
-    create_synthetic_token(&mut suite, mailbox_component);
+    create_synthetic_token(&mut suite, mailbox_component, 18);
 }
 
 #[test]
@@ -315,7 +318,88 @@ fn test_synthetic_receive_token() {
         hex_str_to_bytes32("0000000000000000000000007fa9385be102ac3eac297483dd6233d62b3e1496");
 
     let (synthetic_token, owner_badge, synthetic_token_resource) =
-        create_synthetic_token(&mut suite, mailbox_component);
+        create_synthetic_token(&mut suite, mailbox_component, 18);
+
+    suite
+        .call_method_with_badge(
+            synthetic_token,
+            "enroll_remote_router",
+            owner_badge,
+            manifest_args!(1337u32, recipient_contract, dec!(12)),
+        )
+        .expect_commit_success();
+
+    // Act - send 50 XRD
+    let metadata: Vec<u8> = vec![];
+    let payload: Vec<u8> = hex::decode("0300000000000005390000000000000000000000007fa9385be102ac3eac297483dd6233d62b3e1496000003e80000c07341fadfb99d506736cf979374b560851b181d9e83e225d5437ac270e80000c1f7abd48c518b8ebdc6a35abfbe78583725a97eabdc99224571e0d11d42000000000000000000000000000000000000000000000002b5e3af16b1880000").unwrap();
+    let visible_components = vec![suite.account.address, synthetic_token];
+
+    let receipt = suite.call_method(
+        mailbox_component,
+        "process",
+        manifest_args!(metadata, payload, visible_components),
+    );
+
+    // Assert
+    receipt.expect_commit_success();
+
+    let component_balance = suite.ledger.get_component_balance(synthetic_token, XRD);
+    assert_eq!(component_balance, dec!(0));
+
+    let component_balance = suite
+        .ledger
+        .get_component_balance(suite.account.address, synthetic_token_resource);
+    assert_eq!(component_balance, dec!(50));
+}
+
+#[test]
+fn test_synthetic_token_overflow() {
+    let mut suite = common::setup();
+    let mailbox_component = setup_mailbox(&mut suite);
+    let recipient_contract: Bytes32 =
+        hex_str_to_bytes32("0000000000000000000000007fa9385be102ac3eac297483dd6233d62b3e1496");
+
+    let (synthetic_token, owner_badge, synthetic_token_resource) =
+        create_synthetic_token(&mut suite, mailbox_component, 18);
+
+    suite
+        .call_method_with_badge(
+            synthetic_token,
+            "enroll_remote_router",
+            owner_badge,
+            manifest_args!(1337u32, recipient_contract, dec!(12)),
+        )
+        .expect_commit_success();
+
+    // Act - send back 50 XRD
+    let metadata: Vec<u8> = vec![];
+    let payload: Vec<u8> = hex::decode("0300000000000005390000000000000000000000007fa9385be102ac3eac297483dd6233d62b3e1496000003e80000c07341fadfb99d506736cf979374b560851b181d9e83e225d5437ac270e80000c1f7abd48c518b8ebdc6a35abfbe78583725a97eabdc99224571e0d11d4200fff0000000000000000000000000000000000000000002b5e3af16b1880000").unwrap();
+    let visible_components = vec![suite.account.address, synthetic_token];
+
+    let receipt = suite.call_method(
+        mailbox_component,
+        "process",
+        manifest_args!(metadata, payload, visible_components),
+    );
+
+    // Assert
+    assert!(format!("{:?}", receipt.expect_commit_failure()).contains("Invalid payload: Overflow"));
+
+    let component_balance = suite
+        .ledger
+        .get_component_balance(suite.account.address, synthetic_token_resource);
+    assert_eq!(component_balance, dec!(0));
+}
+
+#[test]
+fn test_synthetic_token_custom_divisibility() {
+    let mut suite = common::setup();
+    let mailbox_component = setup_mailbox(&mut suite);
+    let recipient_contract: Bytes32 =
+        hex_str_to_bytes32("0000000000000000000000007fa9385be102ac3eac297483dd6233d62b3e1496");
+
+    let (synthetic_token, owner_badge, synthetic_token_resource) =
+        create_synthetic_token(&mut suite, mailbox_component, 15);
 
     suite
         .call_method_with_badge(
@@ -346,5 +430,5 @@ fn test_synthetic_receive_token() {
     let component_balance = suite
         .ledger
         .get_component_balance(suite.account.address, synthetic_token_resource);
-    assert_eq!(component_balance, dec!(50));
+    assert_eq!(component_balance, dec!(50_000));
 }

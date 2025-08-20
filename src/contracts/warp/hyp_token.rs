@@ -118,6 +118,9 @@ mod hyp_token {
                     description,
                     divisibility,
                 } => {
+                    // Radix only supports tokens with a divisibility up to 18
+                    assert!(divisibility <= &18u8, "divisibility must be <= 18");
+
                     let bucket = ResourceBuilder::new_fungible(OwnerRole::None)
                         .metadata(metadata!(
                             init {
@@ -245,7 +248,7 @@ mod hyp_token {
                 ));
 
             // Payload for the Hyperlane message
-            let payload = WarpPayload::new(recipient, token_amount);
+            let payload = WarpPayload::new(recipient, token_amount.attos());
 
             Runtime::emit_event(SendRemoteTransferEvent {
                 destination_domain: destination,
@@ -296,7 +299,7 @@ mod hyp_token {
                 .get(&destination_domain)
                 .expect(&format_error!("no router enrolled for domain"));
 
-            let payload: Vec<u8> = WarpPayload::new(recipient, amount).into();
+            let payload: Vec<u8> = WarpPayload::new(recipient, amount.attos()).into();
 
             let standard_hook_metadata = StandardHookMetadata {
                 gas_limit: remote_router.gas,
@@ -348,11 +351,21 @@ mod hyp_token {
                 )
             }
 
-            let share: FungibleBucket = match self.token_type {
-                HypTokenType::Synthetic { .. } => {
-                    self.resource_manager.unwrap().mint(warp_payload.amount)
+            let amount = match self.token_type {
+                HypTokenType::Synthetic { divisibility, .. } => {
+                    use std::ops::Mul;
+                    Decimal::from_attos(
+                        warp_payload
+                            .amount
+                            .mul(I192::from(10u64.pow(18u32 - divisibility as u32))),
+                    )
                 }
-                HypTokenType::Collateral { .. } => self.vault.take(warp_payload.amount),
+                HypTokenType::Collateral { .. } => Decimal::from_attos(warp_payload.amount),
+            };
+
+            let share: FungibleBucket = match self.token_type {
+                HypTokenType::Synthetic { .. } => self.resource_manager.unwrap().mint(amount),
+                HypTokenType::Collateral { .. } => self.vault.take(amount),
             };
 
             ScryptoVmV1Api::object_call(
@@ -365,7 +378,7 @@ mod hyp_token {
                 application_sender: hyperlane_message.sender,
                 origin_domain: hyperlane_message.origin,
                 user_recipient: Runtime::bech32_encode_address(warp_payload.component_address()),
-                amount: warp_payload.amount,
+                amount,
             });
         }
     }

@@ -10,11 +10,11 @@ pub struct WarpPayload {
     /// 32-byte Address in destination convention
     pub recipient: Bytes32,
     /// 32-byte Amount
-    pub amount: Decimal,
+    pub amount: I192,
 }
 
 impl WarpPayload {
-    pub fn new(recipient: Bytes32, amount: Decimal) -> Self {
+    pub fn new(recipient: Bytes32, amount: I192) -> Self {
         Self { recipient, amount }
     }
 
@@ -45,7 +45,6 @@ impl From<&RawWarpPayload> for WarpPayload {
         let amount = U256::from_le_bytes(b.as_ref());
 
         let amount = I192::try_from(amount).expect("Invalid payload");
-        let amount = Decimal::from_attos(amount);
 
         Self { recipient, amount }
     }
@@ -53,10 +52,7 @@ impl From<&RawWarpPayload> for WarpPayload {
 
 impl From<&WarpPayload> for RawWarpPayload {
     fn from(w: &WarpPayload) -> Self {
-        let mut amount = U256::try_from(w.amount.attos())
-            .unwrap()
-            .to_le_bytes()
-            .to_vec();
+        let mut amount = U256::try_from(w.amount).unwrap().to_le_bytes().to_vec();
         amount.reverse();
 
         let mut message_vec: Vec<u8> = vec![];
@@ -80,7 +76,7 @@ mod tests {
     pub fn warp_payload_new_zero() {
         // Arrange & Act
         let address: Bytes32 = Bytes32::zero();
-        let amount = Decimal::zero();
+        let amount = I192::zero();
         let payload = WarpPayload::new(address, amount);
         let bytes: Vec<u8> = payload.into();
 
@@ -93,7 +89,7 @@ mod tests {
     pub fn warp_payload_amount_encoding() {
         // Arrange & Act
         let address: Bytes32 = [1; 32].into();
-        let amount = Decimal::one();
+        let amount = I192::from(10u64.pow(18));
         let payload = WarpPayload::new(address, amount);
         let bytes: Vec<u8> = payload.into();
 
@@ -123,7 +119,7 @@ mod tests {
                 .unwrap();
         let account: ComponentAddress = ComponentAddress::new_or_panic(rb);
         let address: Bytes32 = account.into();
-        let amount = Decimal::zero();
+        let amount = I192::zero();
         let payload = WarpPayload::new(address, amount);
         let bytes: Vec<u8> = payload.clone().into();
 
@@ -169,6 +165,6 @@ mod tests {
 
         // Assert
         assert_eq!(account, component_address);
-        assert_eq!(payload.amount, Decimal::one());
+        assert_eq!(payload.amount, I192::from(10u64.pow(18)));
     }
 }
