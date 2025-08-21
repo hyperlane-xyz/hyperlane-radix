@@ -2,7 +2,13 @@ use scrypto::prelude::*;
 
 use crate::types::Bytes32;
 
-pub type RawWarpPayload = Vec<u8>;
+#[derive(Debug, PartialEq)]
+pub enum WarpPayloadError {
+    PayloadTooShort,
+    DivisibilityTooHigh(u8),
+    DivisibilityTooLowForAmount(Decimal, u8),
+    PayloadAmountTooLarge,
+}
 
 /// A full Hyperlane message between chains
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
@@ -10,12 +16,34 @@ pub struct WarpPayload {
     /// 32-byte Address in destination convention
     pub recipient: Bytes32,
     /// 32-byte Amount
-    pub amount: I192,
+    amount: I192,
 }
 
 impl WarpPayload {
-    pub fn new(recipient: Bytes32, amount: I192) -> Self {
-        Self { recipient, amount }
+    pub fn try_new_with_divisibility(
+        recipient: Bytes32,
+        amount: Decimal,
+        divisibility: u8,
+    ) -> Result<Self, WarpPayloadError> {
+        if divisibility > 18 {
+            return Err(WarpPayloadError::DivisibilityTooHigh(divisibility));
+        }
+
+        let divisor = I192::from(10u64.pow(18u32 - divisibility as u32));
+
+        if amount.attos() % divisor != I192::zero() {
+            return Err(WarpPayloadError::DivisibilityTooLowForAmount(
+                amount,
+                divisibility,
+            ));
+        }
+
+        let amount = amount
+            .attos()
+            .checked_div(I192::from(10u64.pow(18u32 - divisibility as u32)))
+            .ok_or(WarpPayloadError::PayloadAmountTooLarge)?;
+
+        Ok(Self { recipient, amount })
     }
 
     pub fn component_address(&self) -> ComponentAddress {
@@ -26,45 +54,54 @@ impl WarpPayload {
         arr.copy_from_slice(&self.recipient.as_ref()[2..32]);
         ComponentAddress::new_or_panic(arr)
     }
-}
 
-impl From<RawWarpPayload> for WarpPayload {
-    fn from(m: RawWarpPayload) -> Self {
-        WarpPayload::from(&m)
+    pub fn get_amount(&self, divisibility: u8) -> Decimal {
+        use std::ops::Mul;
+        Decimal::from_attos(
+            self.amount
+                .mul(I192::from(10u64.pow(18u32 - divisibility as u32))),
+        )
     }
 }
 
-impl From<&RawWarpPayload> for WarpPayload {
-    fn from(m: &RawWarpPayload) -> Self {
-        let recipient: Bytes32 = m[0..32].into();
+impl TryFrom<Vec<u8>> for WarpPayload {
+    type Error = WarpPayloadError;
 
-        // Next 32 bytes encode the amount
-        // In the future it might be possible that the warp payload carries additional metadata
-        let mut b = m[32..64].to_vec();
+    fn try_from(bytes: Vec<u8>) -> Result<Self, Self::Error> {
+        if bytes.len() < 64 {
+            return Err(WarpPayloadError::PayloadTooShort);
+        }
+
+        let recipient: Bytes32 = bytes[0..32].into();
+
+        // The next 32 bytes encode the amount.
+        // In the future it might be possible that the warp payload carries additional metadata.
+        let mut b = bytes[32..64].to_vec();
         b.reverse();
         let amount = U256::from_le_bytes(b.as_ref());
 
-        let amount = I192::try_from(amount).expect("Invalid payload");
+        let amount = I192::try_from(amount).map_err(|_| WarpPayloadError::PayloadAmountTooLarge)?;
 
-        Self { recipient, amount }
-    }
-}
+        // I192 is signed, but Warp only support positive amounts. If the amount is negative,
+        // the payload is rejected.
+        if amount.is_negative() {
+            return Err(WarpPayloadError::PayloadAmountTooLarge);
+        }
 
-impl From<&WarpPayload> for RawWarpPayload {
-    fn from(w: &WarpPayload) -> Self {
-        let mut amount = U256::try_from(w.amount).unwrap().to_le_bytes().to_vec();
-        amount.reverse();
-
-        let mut message_vec: Vec<u8> = vec![];
-        message_vec.extend_from_slice(w.recipient.as_ref());
-        message_vec.extend_from_slice(&amount);
-        message_vec
+        Ok(Self { recipient, amount })
     }
 }
 
 impl From<WarpPayload> for Vec<u8> {
     fn from(w: WarpPayload) -> Self {
-        RawWarpPayload::from(&w)
+        let mut amount = w.amount.to_le_bytes().to_vec();
+        amount.reverse();
+
+        let mut message_vec: Vec<u8> = vec![];
+        message_vec.extend_from_slice(w.recipient.as_ref());
+        message_vec.extend_from_slice(&[0; 8]);
+        message_vec.extend_from_slice(&amount);
+        message_vec
     }
 }
 
@@ -76,8 +113,8 @@ mod tests {
     pub fn warp_payload_new_zero() {
         // Arrange & Act
         let address: Bytes32 = Bytes32::zero();
-        let amount = I192::zero();
-        let payload = WarpPayload::new(address, amount);
+        let amount = Decimal::zero();
+        let payload = WarpPayload::try_new_with_divisibility(address, amount, 18).unwrap();
         let bytes: Vec<u8> = payload.into();
 
         // Assert
@@ -89,8 +126,8 @@ mod tests {
     pub fn warp_payload_amount_encoding() {
         // Arrange & Act
         let address: Bytes32 = [1; 32].into();
-        let amount = I192::from(10u64.pow(18));
-        let payload = WarpPayload::new(address, amount);
+        let amount = Decimal::one();
+        let payload = WarpPayload::try_new_with_divisibility(address, amount, 18).unwrap();
         let bytes: Vec<u8> = payload.into();
 
         // Assert
@@ -110,6 +147,62 @@ mod tests {
     }
 
     #[test]
+    pub fn warp_payload_maximum_amount() {
+        // Arrange
+
+        // 0000000000000000 7fffffffffffffff ffffffffffffffff ffffffffffffffff
+        // hex(2**191 - 1)
+        let bytes: Vec<u8> =
+            hex::decode("00000000000000007fffffffffffffffffffffffffffffffffffffffffffffff")
+                .unwrap();
+        let mut raw_message: Vec<u8> = vec![0; 32];
+        raw_message.extend_from_slice(&bytes.as_ref());
+
+        // Act
+        let payload = WarpPayload::try_from(raw_message);
+
+        // Assert
+        assert!(payload.is_ok());
+    }
+
+    #[test]
+    pub fn warp_payload_maximum_amount_plus_one() {
+        // Arrange
+
+        // 0000000000000000 8000000000000000 0000000000000000 0000000000000000
+        // hex(2**191 - 1 + 1)
+        let bytes: Vec<u8> =
+            hex::decode("0000000000000000800000000000000000000000000000000000000000000000")
+                .unwrap();
+        let mut raw_message: Vec<u8> = vec![0; 32];
+        raw_message.extend_from_slice(&bytes.as_ref());
+
+        // Act
+        let payload = WarpPayload::try_from(raw_message);
+
+        // Assert
+        assert_eq!(
+            payload.unwrap_err(),
+            WarpPayloadError::PayloadAmountTooLarge
+        );
+    }
+
+    #[test]
+    pub fn warp_payload_use_smaller_decimals_than_allowed() {
+        // Arrange & Act
+        let w = WarpPayload::try_new_with_divisibility(
+            Bytes32::zero(),
+            Decimal::from_subunits(I192::one()),
+            17,
+        );
+        // Assert
+        assert_eq!(
+            w.unwrap_err(),
+            WarpPayloadError::DivisibilityTooLowForAmount(Decimal::from_subunits(I192::one()), 17)
+        );
+    }
+
+    #[test]
     pub fn warp_payload_component_address() {
         // Arrange
         let rb: [u8; 30] =
@@ -119,8 +212,8 @@ mod tests {
                 .unwrap();
         let account: ComponentAddress = ComponentAddress::new_or_panic(rb);
         let address: Bytes32 = account.into();
-        let amount = I192::zero();
-        let payload = WarpPayload::new(address, amount);
+        let amount = Decimal::zero();
+        let payload = WarpPayload::try_new_with_divisibility(address, amount, 18).unwrap();
         let bytes: Vec<u8> = payload.clone().into();
 
         // Act
@@ -160,7 +253,7 @@ mod tests {
         let bytes = hex::decode(raw_message).unwrap();
 
         // Act
-        let payload = WarpPayload::from(&bytes);
+        let payload = WarpPayload::try_from(bytes).unwrap();
         let component_address = payload.component_address();
 
         // Assert

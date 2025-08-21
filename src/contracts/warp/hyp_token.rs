@@ -118,9 +118,6 @@ mod hyp_token {
                     description,
                     divisibility,
                 } => {
-                    // Radix only supports tokens with a divisibility up to 18
-                    assert!(divisibility <= &18u8, "divisibility must be <= 18");
-
                     let bucket = ResourceBuilder::new_fungible(OwnerRole::None)
                         .metadata(metadata!(
                             init {
@@ -248,7 +245,12 @@ mod hyp_token {
                 ));
 
             // Payload for the Hyperlane message
-            let payload = WarpPayload::new(recipient, token_amount.attos());
+            let payload = WarpPayload::try_new_with_divisibility(
+                recipient,
+                token_amount,
+                self.get_divisibility(),
+            )
+            .expect("failed to create payload");
 
             Runtime::emit_event(SendRemoteTransferEvent {
                 destination_domain: destination,
@@ -299,7 +301,10 @@ mod hyp_token {
                 .get(&destination_domain)
                 .expect(&format_error!("no router enrolled for domain"));
 
-            let payload: Vec<u8> = WarpPayload::new(recipient, amount.attos()).into();
+            let payload: Vec<u8> =
+                WarpPayload::try_new_with_divisibility(recipient, amount, self.get_divisibility())
+                    .unwrap()
+                    .into();
 
             let standard_hook_metadata = StandardHookMetadata {
                 gas_limit: remote_router.gas,
@@ -342,7 +347,7 @@ mod hyp_token {
 
             assert_eq!(router.recipient, hyperlane_message.sender);
 
-            let warp_payload: WarpPayload = hyperlane_message.body.clone().into();
+            let warp_payload = WarpPayload::try_from(hyperlane_message.body).unwrap();
 
             if visible_components.is_empty() {
                 panic_error!(
@@ -351,17 +356,7 @@ mod hyp_token {
                 )
             }
 
-            let amount = match self.token_type {
-                HypTokenType::Synthetic { divisibility, .. } => {
-                    use std::ops::Mul;
-                    Decimal::from_attos(
-                        warp_payload
-                            .amount
-                            .mul(I192::from(10u64.pow(18u32 - divisibility as u32))),
-                    )
-                }
-                HypTokenType::Collateral { .. } => Decimal::from_attos(warp_payload.amount),
-            };
+            let amount = warp_payload.get_amount(self.get_divisibility());
 
             let share: FungibleBucket = match self.token_type {
                 HypTokenType::Synthetic { .. } => self.resource_manager.unwrap().mint(amount),
@@ -380,6 +375,14 @@ mod hyp_token {
                 user_recipient: Runtime::bech32_encode_address(warp_payload.component_address()),
                 amount,
             });
+        }
+
+        fn get_divisibility(&self) -> u8 {
+            self.vault
+                .resource_manager()
+                .resource_type()
+                .divisibility()
+                .unwrap()
         }
     }
 }
