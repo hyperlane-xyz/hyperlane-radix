@@ -139,7 +139,7 @@ mod tests {
         assert_eq!(bytes.len(), 64);
         assert!(
             bytes[32..64].iter().all(|&x| x == 0),
-            "Amount has zo be zero"
+            "Amount has to be zero"
         );
 
         let hex_str = bytes

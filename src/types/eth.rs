@@ -1,15 +1,3 @@
-//! Black-box (mostly) digital signature creation and verifification
-//!
-//! WARNING: This is not audited and just about the minimum viable
-//! implemenation.
-//!
-//! Implementation uses the "RustCrypto" crates.  This works well enough but is
-//! far from what should probably be used in production.
-//!
-//! Those creates we depend on here (k256 and friends) are not audited, and this
-//! code is also not audited.  Additionally, the documentation for these crates
-//! leaves a lot to be desired.  This works but the choices may not be optimal
-//! for future on-ledger use
 use scrypto::prelude::*;
 
 use crate::types::Bytes32;
@@ -94,7 +82,7 @@ pub fn recover_eth_address(digest: &Hash, signature: &Secp256k1Signature) -> Eth
         CryptoUtils::secp256k1_ecdsa_verify_and_key_recover_uncompressed(digest, signature);
 
     // ethereum address is the hash of the uncompressed public key
-    // exculde the first byte - which is always 0x4 to indicate Secp256k1
+    // exclude the first byte - which is always 0x4 to indicate Secp256k1
     let pubkey_bytes = pubkey.0;
     let address = keccak256_hash(&pubkey_bytes[1..]);
     address.into()
