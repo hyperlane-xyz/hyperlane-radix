@@ -303,7 +303,7 @@ mod hyp_token {
 
             let payload: Vec<u8> =
                 WarpPayload::try_new_with_divisibility(recipient, amount, self.get_divisibility())
-                    .unwrap()
+                    .expect("failed to create warp payload")
                     .into();
 
             let standard_hook_metadata = StandardHookMetadata {
@@ -347,7 +347,8 @@ mod hyp_token {
 
             assert_eq!(router.recipient, hyperlane_message.sender);
 
-            let warp_payload = WarpPayload::try_from(hyperlane_message.body).unwrap();
+            let warp_payload = WarpPayload::try_from(hyperlane_message.body)
+                .expect("failed to parse warp payload");
 
             if visible_components.is_empty() {
                 panic_error!(
@@ -377,12 +378,12 @@ mod hyp_token {
             });
         }
 
-        fn get_divisibility(&self) -> u8 {
+        fn get_divisibility(&self) -> u32 {
             self.vault
                 .resource_manager()
                 .resource_type()
                 .divisibility()
-                .unwrap()
+                .unwrap() as u32
         }
     }
 }

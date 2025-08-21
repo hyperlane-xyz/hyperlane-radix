@@ -1,12 +1,13 @@
 use scrypto::prelude::*;
+use std::ops::Div;
 
 use crate::types::Bytes32;
 
 #[derive(Debug, PartialEq)]
 pub enum WarpPayloadError {
     PayloadTooShort,
-    DivisibilityTooHigh(u8),
-    DivisibilityTooLowForAmount(Decimal, u8),
+    DivisibilityTooHigh(u32),
+    DivisibilityTooLowForAmount(Decimal, u32),
     PayloadAmountTooLarge,
 }
 
@@ -23,13 +24,13 @@ impl WarpPayload {
     pub fn try_new_with_divisibility(
         recipient: Bytes32,
         amount: Decimal,
-        divisibility: u8,
+        divisibility: u32,
     ) -> Result<Self, WarpPayloadError> {
-        if divisibility > 18 {
+        if divisibility > Decimal::SCALE {
             return Err(WarpPayloadError::DivisibilityTooHigh(divisibility));
         }
 
-        let divisor = I192::from(10u64.pow(18u32 - divisibility as u32));
+        let divisor = I192::from(10u64.pow(Decimal::SCALE - divisibility));
 
         if amount.attos() % divisor != I192::zero() {
             return Err(WarpPayloadError::DivisibilityTooLowForAmount(
@@ -40,8 +41,7 @@ impl WarpPayload {
 
         let amount = amount
             .attos()
-            .checked_div(I192::from(10u64.pow(18u32 - divisibility as u32)))
-            .ok_or(WarpPayloadError::PayloadAmountTooLarge)?;
+            .div(I192::from(10u64.pow(Decimal::SCALE - divisibility)));
 
         Ok(Self { recipient, amount })
     }
@@ -55,11 +55,11 @@ impl WarpPayload {
         ComponentAddress::new_or_panic(arr)
     }
 
-    pub fn get_amount(&self, divisibility: u8) -> Decimal {
+    pub fn get_amount(&self, divisibility: u32) -> Decimal {
         use std::ops::Mul;
         Decimal::from_attos(
             self.amount
-                .mul(I192::from(10u64.pow(18u32 - divisibility as u32))),
+                .mul(I192::from(10u64.pow(Decimal::SCALE - divisibility))),
         )
     }
 }
@@ -94,11 +94,13 @@ impl TryFrom<Vec<u8>> for WarpPayload {
 
 impl From<WarpPayload> for Vec<u8> {
     fn from(w: WarpPayload) -> Self {
-        let mut amount = w.amount.to_le_bytes().to_vec();
+        let mut amount = w.amount.to_le_bytes();
         amount.reverse();
 
         let mut message_vec: Vec<u8> = vec![];
         message_vec.extend_from_slice(w.recipient.as_ref());
+        // For the Radix implementation the payload only supports 24 (instead of 32 bytes)
+        // Therefore, we pad the amount with 8 zero bytes.
         message_vec.extend_from_slice(&[0; 8]);
         message_vec.extend_from_slice(&amount);
         message_vec
