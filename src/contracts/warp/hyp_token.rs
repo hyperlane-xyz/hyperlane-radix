@@ -245,7 +245,12 @@ mod hyp_token {
                 ));
 
             // Payload for the Hyperlane message
-            let payload = WarpPayload::new(recipient, token_amount);
+            let payload = WarpPayload::try_new_with_divisibility(
+                recipient,
+                token_amount,
+                self.get_divisibility(),
+            )
+            .expect("failed to create payload");
 
             Runtime::emit_event(SendRemoteTransferEvent {
                 destination_domain: destination,
@@ -296,7 +301,10 @@ mod hyp_token {
                 .get(&destination_domain)
                 .expect(&format_error!("no router enrolled for domain"));
 
-            let payload: Vec<u8> = WarpPayload::new(recipient, amount).into();
+            let payload: Vec<u8> =
+                WarpPayload::try_new_with_divisibility(recipient, amount, self.get_divisibility())
+                    .expect("failed to create warp payload")
+                    .into();
 
             let standard_hook_metadata = StandardHookMetadata {
                 gas_limit: remote_router.gas,
@@ -339,7 +347,8 @@ mod hyp_token {
 
             assert_eq!(router.recipient, hyperlane_message.sender);
 
-            let warp_payload: WarpPayload = hyperlane_message.body.clone().into();
+            let warp_payload = WarpPayload::try_from(hyperlane_message.body)
+                .expect("failed to parse warp payload");
 
             if visible_components.is_empty() {
                 panic_error!(
@@ -348,11 +357,11 @@ mod hyp_token {
                 )
             }
 
+            let amount = warp_payload.get_amount(self.get_divisibility());
+
             let share: FungibleBucket = match self.token_type {
-                HypTokenType::Synthetic { .. } => {
-                    self.resource_manager.unwrap().mint(warp_payload.amount)
-                }
-                HypTokenType::Collateral { .. } => self.vault.take(warp_payload.amount),
+                HypTokenType::Synthetic { .. } => self.resource_manager.unwrap().mint(amount),
+                HypTokenType::Collateral { .. } => self.vault.take(amount),
             };
 
             ScryptoVmV1Api::object_call(
@@ -365,8 +374,16 @@ mod hyp_token {
                 application_sender: hyperlane_message.sender,
                 origin_domain: hyperlane_message.origin,
                 user_recipient: Runtime::bech32_encode_address(warp_payload.component_address()),
-                amount: warp_payload.amount,
+                amount,
             });
+        }
+
+        fn get_divisibility(&self) -> u32 {
+            self.vault
+                .resource_manager()
+                .resource_type()
+                .divisibility()
+                .unwrap() as u32
         }
     }
 }
