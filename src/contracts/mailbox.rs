@@ -169,19 +169,20 @@ mod mailbox {
 
             let mut payment = payment;
 
-            let default_hook = hook.or(self.default_hook);
-            if let Some(default_hook) = default_hook {
+            if let Some(required_hook) = self.required_hook {
                 let result = ScryptoVmV1Api::object_call(
-                    default_hook.as_node_id(),
+                    required_hook.as_node_id(),
                     "post_dispatch",
                     scrypto_args!(hook_metadata.clone(), hyperlane_message.clone(), payment),
                 );
                 payment = scrypto_decode(&result)
                     .expect(&format_error!("failed to decode post_dispatch result"));
             }
-            if let Some(required_hook) = self.required_hook {
+
+            let default_hook = hook.or(self.default_hook);
+            if let Some(default_hook) = default_hook {
                 let result = ScryptoVmV1Api::object_call(
-                    required_hook.as_node_id(),
+                    default_hook.as_node_id(),
                     "post_dispatch",
                     scrypto_args!(hook_metadata, hyperlane_message.clone(), payment),
                 );
