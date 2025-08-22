@@ -53,7 +53,7 @@ mod merkle_root_multisig_ism {
             let digest = message.digest(
                 metadata.origin_merkle_tree_hook,
                 signed_root.into(),
-                metadata.message_index,
+                metadata.signed_checkpoint_index,
             );
 
             verify_multisig(
