@@ -54,7 +54,7 @@ mod mailbox {
 
         processed_messages: KeyValueStore<Bytes32, ()>,
 
-        // latests dispatched message, used for auth in hooks
+        // latest dispatched message, used for auth in hooks
         latest_dispatched_message: Bytes32,
 
         // sequence for process, used for better indexing

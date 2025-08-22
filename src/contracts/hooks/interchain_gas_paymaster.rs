@@ -176,7 +176,7 @@ mod interchain_gas_paymaster {
         }
 
         /// Post dispatch accepts a vec of buckets, that is the payment that the user is willing to pass
-        /// We can't assume that payments will happen only in one resource type (one bucket is always only assisated with one resource)
+        /// We can't assume that payments will happen only in one resource type (one bucket is always only associated with one resource)
         /// We return the left over Buckets that have not been consumed
         pub fn post_dispatch(
             &mut self,
@@ -205,7 +205,7 @@ mod interchain_gas_paymaster {
                 resource_payment,
             );
 
-            // append left over payment back to the list of resuorces that have not been used
+            // append left over payment back to the list of resources that have not been used
             payment.push(result);
 
             payment
@@ -213,7 +213,7 @@ mod interchain_gas_paymaster {
 
         /// Quote dispatch returns a map from resources and their amount that is required in decimals
         /// this ensure that we are not limited to a single payment resource and instead can model multiple resources
-        /// that might be needed in order to perfrom a remote transfer
+        /// that might be needed in order to perform a remote transfer
         pub fn quote_dispatch(
             &self,
             metadata: Option<StandardHookMetadata>,
