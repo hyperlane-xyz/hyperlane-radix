@@ -383,7 +383,6 @@ fn test_synthetic_token_overflow() {
     );
 
     // Assert
-    println!("{:?}", receipt);
     assert!(format!("{:?}", receipt.expect_commit_failure()).contains("PayloadAmountTooLarge"));
 
     let component_balance = suite

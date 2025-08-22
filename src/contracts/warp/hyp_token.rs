@@ -364,11 +364,8 @@ mod hyp_token {
                 HypTokenType::Collateral { .. } => self.vault.take(amount),
             };
 
-            ScryptoVmV1Api::object_call(
-                warp_payload.component_address().as_node_id(),
-                "try_deposit_or_abort",
-                scrypto_args!(share, None::<ResourceOrNonFungible>),
-            );
+            let mut account: Global<Account> = warp_payload.component_address().into();
+            account.try_deposit_or_abort(share.into(), None);
 
             Runtime::emit_event(ReceiveRemoteTransferEvent {
                 application_sender: hyperlane_message.sender,
