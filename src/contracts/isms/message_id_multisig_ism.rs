@@ -7,7 +7,7 @@ use crate::types::HyperlaneMessage;
 use scrypto::prelude::*;
 
 #[blueprint]
-mod message_id_mutlsig_ism {
+mod message_id_multisig_ism {
 
     struct MessageIdMultisigIsm {
         validators: Vec<EthAddress>,
