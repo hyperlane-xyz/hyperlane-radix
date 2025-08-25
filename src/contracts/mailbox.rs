@@ -6,13 +6,7 @@ use scrypto::blueprint;
 use scrypto::prelude::*;
 
 #[blueprint]
-#[events(
-    InstantiationEvent,
-    DispatchEvent,
-    DispatchIdEvent,
-    ProcessIdEvent,
-    ProcessEvent
-)]
+#[events(DispatchEvent, DispatchIdEvent, ProcessIdEvent, ProcessEvent)]
 mod mailbox {
 
     enable_method_auth! {
@@ -361,11 +355,6 @@ mod mailbox {
             return_value.or(self.default_ism)
         }
     }
-}
-
-#[derive(ScryptoSbor, ScryptoEvent)]
-pub struct InstantiationEvent {
-    pub local_domain: u32,
 }
 
 #[derive(ScryptoSbor, ScryptoEvent)]
