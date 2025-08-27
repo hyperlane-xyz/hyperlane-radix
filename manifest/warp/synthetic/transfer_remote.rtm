@@ -8,7 +8,7 @@ CALL_METHOD
     Address("${account}")
     "withdraw"
     Address("${xrd}")
-    Decimal("11")
+    Decimal("21")
 ;
 CALL_METHOD
     Address("${account}")
@@ -25,7 +25,7 @@ TAKE_FROM_WORKTOP
 # put the taken amount into a bucket to that we can pass it into the function that we are calling
 TAKE_FROM_WORKTOP
     Address("${xrd}")
-    Decimal("11")
+    Decimal("21")
     Bucket("bucket2") # the bucket name that we put the xrd into
 ;
 CALL_METHOD
