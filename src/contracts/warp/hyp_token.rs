@@ -16,6 +16,7 @@ pub enum HypTokenType {
         name: String,
         symbol: String,
         description: String,
+        icon_url: Url,
         divisibility: u8,
     },
 }
@@ -116,6 +117,7 @@ mod hyp_token {
                     name,
                     symbol,
                     description,
+                    icon_url,
                     divisibility,
                 } => {
                     let bucket = ResourceBuilder::new_fungible(OwnerRole::None)
@@ -124,6 +126,7 @@ mod hyp_token {
                                 "name" => name.clone(), locked;
                                 "symbol" => symbol.clone(), locked;
                                 "description" => description.clone(), locked;
+                                "icon_url" => icon_url.clone(), locked;
                             }
                         ))
                         .mint_roles(mint_roles! {
