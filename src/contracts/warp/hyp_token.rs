@@ -120,10 +120,16 @@ mod hyp_token {
                 } => {
                     let bucket = ResourceBuilder::new_fungible(OwnerRole::None)
                         .metadata(metadata!(
+                            roles {
+                                metadata_setter => rule!(require(owner_badge.resource_address()));
+                                metadata_setter_updater => rule!(require(owner_badge.resource_address()));
+                                metadata_locker => rule!(require(owner_badge.resource_address()));
+                                metadata_locker_updater => rule!(require(owner_badge.resource_address()));
+                            },
                             init {
-                                "name" => name.clone(), locked;
-                                "symbol" => symbol.clone(), locked;
-                                "description" => description.clone(), locked;
+                                "name" => name.clone(), updatable;
+                                "symbol" => symbol.clone(), updatable;
+                                "description" => description.clone(), updatable;
                             }
                         ))
                         .mint_roles(mint_roles! {
