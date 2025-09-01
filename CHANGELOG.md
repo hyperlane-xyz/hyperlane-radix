@@ -12,9 +12,7 @@
 
 An '!' indicates an API breaking change.
 
-## Unreleased
-
-## v1.0.0 - 2025-09-01
+## [v1.0.0](https://github.com/hyperlane-xyz/hyperlane-radix/releases/tag/v1.0.0) - 2025-09-01
 
 **Initial Release of the Hyperlane Radix implementation** 🚀
 
