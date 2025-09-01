@@ -1,0 +1,37 @@
+name: Build Scrypto Release
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          platforms: linux/amd64
+
+      - name: Pull Scrypto builder image
+        run: |
+          DOCKER_DEFAULT_PLATFORM=linux/amd64 docker pull radixdlt/scrypto-builder:v1.3.0
+
+      - name: Run Scrypto builder
+        run: |
+          DOCKER_DEFAULT_PLATFORM=linux/amd64 docker run -v ${{ github.workspace }}:/src radixdlt/scrypto-builder:v1.3.0
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: scrypto-binary
+          path: |
+            target/wasm32-unknown-unknown/release/hyperlane_radix.wasm
+            target/wasm32-unknown-unknown/release/hyperlane_radix.rpd
+          retention-days: 30
