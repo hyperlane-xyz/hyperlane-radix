@@ -496,3 +496,51 @@ fn test_collateral_token_custom_divisibility() {
     let expected_message = hex::decode("0300000000000003e80000c0816a2596f3b8e943d594f7286e76a8f272d926cc9622add5ea8f1f7089000005390000000000000000000000007fa9385be102ac3eac297483dd6233d62b3e1496000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000f4240").unwrap();
     assert_eq!(dispatch_event.message, expected_message);
 }
+
+#[test]
+fn test_mailbox_replay_protection() {
+    //Arrange
+    let mut suite = common::setup();
+    let mailbox_component = setup_mailbox(&mut suite);
+    let recipient_contract: Bytes32 =
+        hex_str_to_bytes32("0000000000000000000000007fa9385be102ac3eac297483dd6233d62b3e1496");
+
+    let (synthetic_token, owner_badge, _synthetic_token_resource) =
+        create_synthetic_token(&mut suite, mailbox_component, 18);
+
+    suite
+        .call_method_with_badge(
+            synthetic_token,
+            "enroll_remote_router",
+            owner_badge,
+            manifest_args!(1337u32, recipient_contract, dec!(12)),
+        )
+        .expect_commit_success();
+
+    // Act - send 50 XRD
+    let metadata: Vec<u8> = vec![];
+    let payload: Vec<u8> = hex::decode("0300000000000005390000000000000000000000007fa9385be102ac3eac297483dd6233d62b3e1496000003e80000c07341fadfb99d506736cf979374b560851b181d9e83e225d5437ac270e80000c1f7abd48c518b8ebdc6a35abfbe78583725a97eabdc99224571e0d11d42000000000000000000000000000000000000000000000002b5e3af16b1880000").unwrap();
+    let visible_components = vec![suite.account.address, synthetic_token];
+
+    let receipt = suite.call_method(
+        mailbox_component,
+        "process",
+        manifest_args!(
+            metadata.clone(),
+            payload.clone(),
+            visible_components.clone()
+        ),
+    );
+
+    // Assert
+    receipt.expect_commit_success();
+
+    let receipt = suite.call_method(
+        mailbox_component,
+        "process",
+        manifest_args!(metadata, payload, visible_components),
+    );
+
+    assert!(format!("{:?}", receipt.expect_commit_failure())
+        .contains("Mailbox: message already processed"));
+}
