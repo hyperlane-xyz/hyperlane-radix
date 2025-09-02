@@ -250,3 +250,167 @@ fn test_dispatch_message_invalid_claimed_sender() {
         "Failure(SystemError(AssertAccessRuleFailed))"
     );
 }
+
+#[test]
+fn test_set_default_ism() {
+    let mut suite = common::setup();
+
+    //Act
+    let (receipt, mailbox, _) = create_mailbox(&mut suite, 100);
+
+    //Assert
+    receipt.expect_commit_success();
+
+    let mailbox = mailbox.unwrap();
+
+    let receipt = suite.call_method(mailbox, "set_default_ism", manifest_args!(mailbox));
+    assert!(format!("{:?}", receipt.expect_commit_failure()).contains("Unauthorized"));
+}
+
+#[test]
+fn test_set_default_hook() {
+    let mut suite = common::setup();
+
+    //Act
+    let (receipt, mailbox, _) = create_mailbox(&mut suite, 100);
+
+    //Assert
+    receipt.expect_commit_success();
+
+    let mailbox = mailbox.unwrap();
+
+    let receipt = suite.call_method(mailbox, "set_default_hook", manifest_args!(mailbox));
+    assert!(format!("{:?}", receipt.expect_commit_failure()).contains("Unauthorized"));
+}
+
+#[test]
+fn test_set_required_hook() {
+    let mut suite = common::setup();
+
+    //Act
+    let (receipt, mailbox, _) = create_mailbox(&mut suite, 100);
+
+    //Assert
+    receipt.expect_commit_success();
+
+    let mailbox = mailbox.unwrap();
+
+    let receipt = suite.call_method(mailbox, "set_required_hook", manifest_args!(mailbox));
+    assert!(format!("{:?}", receipt.expect_commit_failure()).contains("Unauthorized"));
+}
+
+fn setup_merkle_tree_hook(
+    suite: &mut Suite,
+) -> (ComponentAddress, ComponentAddress, ResourceAddress) {
+    let (receipt, mailbox, owner) = create_mailbox(suite, 100);
+    receipt.expect_commit_success();
+    let mailbox = mailbox.unwrap();
+    let owner = owner.unwrap();
+
+    let result = suite.instantiate_blueprint("MerkleTreeHook", manifest_args!(mailbox));
+    result.0.expect_commit_success();
+    let merkle_tree_hook = result.1.unwrap();
+
+    (mailbox, merkle_tree_hook, owner)
+}
+
+#[test]
+fn test_default_hook() {
+    let mut suite = common::setup();
+
+    //Act
+    let (mailbox, merkle_tree_hook, owner) = setup_merkle_tree_hook(&mut suite);
+    let receipt = suite.call_method_with_badge(
+        mailbox,
+        "set_default_hook",
+        owner,
+        manifest_args!(merkle_tree_hook),
+    );
+    receipt.expect_commit_success();
+
+    let address = suite.account.address;
+
+    let r = dispatch_message(
+        &mut suite,
+        mailbox,
+        1337u32,
+        Bytes32::zero(),
+        vec![],
+        None,
+        address,
+        dec!(200000),
+    );
+    r.expect_commit_success();
+    let dispatch_count: u32 =
+        suite.call_method_success(merkle_tree_hook, "count", manifest_args!());
+
+    assert_eq!(
+        dispatch_count, 1,
+        "post_dispatch default hook was not called"
+    )
+}
+
+#[test]
+fn test_custom_hook() {
+    let mut suite = common::setup();
+
+    //Act
+    let (mailbox, merkle_tree_hook, _) = setup_merkle_tree_hook(&mut suite);
+    let address = suite.account.address;
+
+    let r = dispatch_message(
+        &mut suite,
+        mailbox,
+        1337u32,
+        Bytes32::zero(),
+        vec![],
+        Some(merkle_tree_hook),
+        address,
+        dec!(200000),
+    );
+    r.expect_commit_success();
+    let dispatch_count: u32 =
+        suite.call_method_success(merkle_tree_hook, "count", manifest_args!());
+
+    assert_eq!(
+        dispatch_count, 1,
+        "post_dispatch custom hook was not called"
+    )
+}
+
+#[test]
+fn test_required_hook() {
+    let mut suite = common::setup();
+
+    //Act
+    let (mailbox, merkle_tree_hook, owner) = setup_merkle_tree_hook(&mut suite);
+    let address = suite.account.address;
+
+    let receipt = suite.call_method_with_badge(
+        mailbox,
+        "set_required_hook",
+        owner,
+        manifest_args!(merkle_tree_hook),
+    );
+    receipt.expect_commit_success();
+
+    let r = dispatch_message(
+        &mut suite,
+        mailbox,
+        1337u32,
+        Bytes32::zero(),
+        vec![],
+        Some(merkle_tree_hook),
+        address,
+        dec!(200000),
+    );
+    r.expect_commit_success();
+
+    let dispatch_count: u32 =
+        suite.call_method_success(merkle_tree_hook, "count", manifest_args!());
+
+    assert_eq!(
+        dispatch_count, 2,
+        "post_dispatch required hook was not called"
+    )
+}
