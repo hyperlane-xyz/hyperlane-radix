@@ -55,6 +55,15 @@ scrypto test -- --nocapture
 
 - Use scrypto-interfaces
 
+## Audit
+
+This code was audited by Zellic prior to deployment. 
+From August 15 to August 22, 2025, Zellic conducted a security assessment of 
+Hyperlane, reviewing Hyperlane Radix's code for vulnerabilities, design flaws, 
+and general weaknesses in security posture.
+
+[Hyperlane - Radix - Zellic Audit Report](https://github.com/Zellic/publications/blob/6b0207586e075d5d1937d5cad23ac5ef79f75805/Hyperlane%20-%20Radix%20-%20Zellic%20Audit%20Report.pdf)
+
 ## License
 
 This project is licensed under the Apache License, Version 2.0.  
