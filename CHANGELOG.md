@@ -12,6 +12,12 @@
 
 An '!' indicates an API breaking change.
 
+## [v1.1.0](https://github.com/hyperlane-xyz/hyperlane-radix/releases/tag/v1.1.0) - 2025-09-02
+
+### Features
+
+! [#28](https://github.com/hyperlane-xyz/hyperlane-radix/pull/28) Updatable HypToken resource metadata.
+
 ## [v1.0.0](https://github.com/hyperlane-xyz/hyperlane-radix/releases/tag/v1.0.0) - 2025-09-01
 
 **Initial Release of the Hyperlane Radix implementation** 🚀
