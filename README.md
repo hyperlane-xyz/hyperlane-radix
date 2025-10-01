@@ -51,9 +51,18 @@ Run test suite.
 scrypto test -- --nocapture
 ```
 
-## Future Enhancements
+## Deployment
 
-- Use scrypto-interfaces
+This code is deployed on the Radix Mainnet. Binary generation is handled 
+deterministically using [Scrypto Builder](https://docs.radixdlt.com/docs/scrypto-builder) 
+within a GitHub Action workflow.
+
+| Version  | Components         | Package                                                                                                                                                                                 |
+|----------|--------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `v1.0.0` | Mailbox, ISMs, IGP | [package_rdx1pk3ldj3ktxuw6sv5txspjt2a8s42c7xxcn6wnf5yuytdrcqhpflfkc](https://dashboard.radixdlt.com/package/package_rdx1pk3ldj3ktxuw6sv5txspjt2a8s42c7xxcn6wnf5yuytdrcqhpflfkc/summary) |
+| `v1.1.0` | WarpTokens         | [package_rdx1pkzmcj4mtal34ddx9jrt8um6u3yqheqpfvcj4s0ulmgyt094fw0jzh](https://dashboard.radixdlt.com/package/package_rdx1pkzmcj4mtal34ddx9jrt8um6u3yqheqpfvcj4s0ulmgyt094fw0jzh/summary) |
+
+Component configurations and deployed routes are maintained in the [Hyperlane Registry](https://github.com/hyperlane-xyz/hyperlane-registry/tree/main/chains/radix).
 
 ## Audit
 
